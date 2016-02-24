@@ -5,10 +5,15 @@
 %}
 
 %token SEMICOLON COMMA
-%token <string>TYPE
+/* %token <typing>TYPE */
+%token INTDEC BOOLDEC VOIDDEC LISTDEC
 %token <string>FUNCID
 %token <string>VARID
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
+
+%token RETURN
+%token <int32>INTLIT
+%token <bool>BOOLLIT
 
 %left SEMICOLON
 %left COMMA
@@ -25,17 +30,44 @@ funcDefs:
 	| funcDef { $1 };
 
 funcDef:
-	| TYPE FUNCID OPENPAREN paramList CLOSEPAREN OPENBRACE CLOSEBRACE {
-		FuncDef( FuncIdentifier( $2 ), TypeDec( $1 ), $4, Null ) 
+	| typeDec FUNCID funcDefParams funcDefBody {
+		FuncDef( FuncIdentifier( $2 ), TypeDec( $1 ), $3, $4 )
 	};
-	| TYPE FUNCID OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE {
-		FuncDef( FuncIdentifier( $2 ), TypeDec( $1 ), Null, Null ) 
-	}; /* (* 2nd definition to allow 0 parameters to a function *) */
-	/* (* Will need something between the open and close braces eventually, and use that in place of the Null constructor *) */
+
+funcDefParams:
+	| OPENPAREN paramList CLOSEPAREN { $2 }
+	| OPENPAREN CLOSEPAREN { Null }
+
+funcDefBody:
+	| OPENBRACE exprList CLOSEBRACE { $2 }
+	| OPENBRACE CLOSEBRACE { Null }
 
 paramList:
 	| funcParam COMMA paramList { FuncParams( $1, $3 ) }
 	| funcParam { $1 }
 
 funcParam:
-	| TYPE VARID { ParamDec( TypeDec( $1 ), VarIdentifier( $2 ) ) }
+	| typeDec VARID { ParamDec( TypeDec( $1 ), VarIdentifier( $2 ) ) }
+
+exprList:
+	| expr SEMICOLON exprList { Seq( $1, $3 ) }
+	| expr { $1 }
+	| expr SEMICOLON { $1 }
+
+expr:
+	| RETURN { ReturnStmt( Null ) }
+	| RETURN literal { ReturnStmt( $2 ) }
+
+literal:
+	| INTLIT { IntLit $1 }
+	| BOOLLIT { BoolLit $1 }
+
+typeDec:
+	| INTDEC { Int }
+	| BOOLDEC { Bool }
+	| VOIDDEC { Void }
+	| typeDec LISTDEC { List( $1 ) }
+
+
+
+
