@@ -22,52 +22,10 @@ type ast =
 	| BoolLit of bool
 
 
-exception InvalidTyping
+exception InvalidTyping of string;;
 
 
-let rec typeCheck = function
-	| Seq( childA, childB )
-		-> let typeA = typeCheck childA
-		in let typeB = typeCheck childB
-		in ( match typeA with
-			| ReturnType _ -> typeA
-			| _ -> typeB )
-	| FuncDef( name, declaredRtnType, params, fnBody )
-		(* Once we can call variables and functions, we'll have to actually do something with
-		   the name and params, for now they're not relevant to type checking though *)
-		-> let observedType = typeCheck fnBody
-		in ( match ( declaredRtnType, observedType ) with
-			| ( TypeDec ta, ReturnType tb ) -> if ta == tb
-				then Type ta
-				else raise InvalidTyping
-			(* Allow no return statement for void functions *)
-			| ( TypeDec Void, Type Void ) -> Type Void
-			| ( _, _ ) -> raise InvalidTyping )
-	| TypeDec( t ) -> Type t
-	
-	(* This will need to return parameter typings once I'm doing more with
-	   variable names and types, for now, its type is irrelevant *)
-	| FuncParams( paramA, paramB )
-		(* TODO: Still accepting void params for some reason *)
-		-> ignore( typeCheck paramA ); ignore( typeCheck paramB ); Type Void
-	| ParamDec( typeTree, paramName ) -> ( match typeCheck typeTree with
-		| Type Void -> raise InvalidTyping (* Can't have void parameters *)
-		| t -> t ) (* accept anything else *)
-	| VarIdentifier _ -> Type Void
-	
-	(* Again, this will need to actually return a type once function calls are
-	   implemented, but for now, it's useless *)
-	| FuncIdentifier _ -> Type Void
-	
-	| ReturnStmt( exp ) -> ( match typeCheck( exp ) with
-		| Type t -> ReturnType t
-		| ReturnType _ -> raise InvalidTyping )
-	
-	| IntLit _ -> Type Int
-	| BoolLit _ -> Type Bool
-	
-	| Null -> Type Void
-	(* TODO: Finish this *)
+
 
 let prettyPrint tree =
 	let tabs i = String.make i '\t'
@@ -87,7 +45,51 @@ let prettyPrint tree =
 		| FuncIdentifier( id ) -> id
 		| Null -> ""
 		
-		| ReturnStmt( tree ) -> tabs i ^ "return " ^ ( aux i tree ) ^ ";"		
+		| ReturnStmt( tree ) -> tabs i ^ "return " ^ ( aux i tree ) ^ ";"
 		| IntLit( value ) -> Int32.to_string value
 		| BoolLit( value ) -> string_of_bool value
 	in aux 0 tree
+
+let rec typeCheck = function
+	| Seq( childA, childB )
+		-> let typeA = typeCheck childA
+		in let typeB = typeCheck childB
+		in ( match typeA with
+			| ReturnType _ -> typeA
+			| _ -> typeB )
+	| FuncDef( name, declaredRtnType, params, fnBody )
+		(* Once we can call variables and functions, we'll have to actually do something with
+		   the name and params, for now they're not relevant to type checking though *)
+		-> ignore( typeCheck params );
+		let observedType = typeCheck fnBody
+		in ( match ( declaredRtnType, observedType ) with
+			| ( TypeDec ta, ReturnType tb ) -> if ta == tb
+				then Type ta
+				else raise ( InvalidTyping ( "function "^( prettyPrint name )^" returns wrong type" ) )
+			(* Allow no return statement for void functions *)
+			| ( TypeDec Void, Type Void ) -> Type Void
+			| ( _, _ ) -> raise ( InvalidTyping  ( "function "^( prettyPrint name )^" does not return a value, but is not void" ) ) )
+	| TypeDec( t ) -> Type t
+	
+	(* This will need to return parameter typings once I'm doing more with
+	   variable names and types, for now, its type is irrelevant *)
+	| FuncParams( paramA, paramB )
+		(* TODO: Still accepting void params for some reason *)
+		-> ignore( typeCheck paramA ); ignore( typeCheck paramB ); Type Void
+	| ParamDec( typeTree, paramName ) -> print_string "matching params"; ( match typeCheck typeTree with
+		| Type Void -> raise ( InvalidTyping "parameters cannot be void" )
+		| t -> t ) (* accept anything else *)
+	| VarIdentifier _ -> Type Void
+	
+	(* Again, this will need to actually return a type once function calls are
+	   implemented, but for now, it's useless *)
+	| FuncIdentifier _ -> Type Void
+	
+	| ReturnStmt( exp ) -> ( match typeCheck( exp ) with
+		| Type t -> ReturnType t
+		| ReturnType _ -> raise ( InvalidTyping "Cannot return an already returned value" ) )
+	
+	| IntLit _ -> Type Int
+	| BoolLit _ -> Type Bool
+	
+	| Null -> Type Void
