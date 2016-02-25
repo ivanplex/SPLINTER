@@ -2,3 +2,5 @@
 *.out
 *.cmo
 *.exe
+*.exe
+splinterpreter.exe
