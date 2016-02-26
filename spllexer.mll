@@ -7,8 +7,10 @@
 
 rule main = parse
 	| [ ' ' '\t' '\n' '\r' ] { main lexbuf }
+	| '=' { ASSIGN }
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
+	| '~' { ENDOFPROGRAM }
 	
 	| "return" { RETURN } 
 	
