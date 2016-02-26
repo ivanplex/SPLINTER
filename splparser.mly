@@ -6,25 +6,26 @@
 
 %token SEMICOLON COMMA
 %token ASSIGN
-/* %token <typing>TYPE */
+/*(* %token <typing>TYPE *)*/
 %token INTDEC BOOLDEC VOIDDEC LISTDEC
 %token <string>FUNCID
 %token <string>VARID
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
+%token ENDOFPROGRAM
 
 %token RETURN
 %token <int32>INTLIT
 %token <bool>BOOLLIT
 
-%left SEMICOLON
 %left COMMA
+%left SEMICOLON
 
 %start main
 %type <Spl.ast> main
 %%
 
 main:
-	funcDefs SEMICOLON { $1 };
+	funcDefs ENDOFPROGRAM { $1 };
 
 /*(* TODO: rename funcDefs to something more accurate *)*/
 funcDefs:
@@ -32,8 +33,8 @@ funcDefs:
 	| topLevelOperation { $1 };
 
 topLevelOperation:
-	| funcDef { $1 }
-	| varInit { $1 };
+	| funcDef SEMICOLON { $1 }
+	| varInit SEMICOLON { $1 };
 
 funcDef:
 	| typeDec FUNCID funcDefParams funcDefBody {
@@ -79,7 +80,7 @@ typeDec:
 	| typeDec LISTDEC { List( $1 ) }
 
 varInit:
-	| typeDec varName ASSIGN expr { VarInitialisation( TypeDec( $1 ), $2, $3 ) }
+	| typeDec varName ASSIGN expr { VarInitialisation( TypeDec( $1 ), $2, $4 ) }
 
 varAssign:
 	| varName ASSIGN expr { Assignment( $1, $3 ) }

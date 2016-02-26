@@ -10,6 +10,7 @@ rule main = parse
 	| '=' { ASSIGN }
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
+	| '~' { ENDOFPROGRAM }
 	
 	| "return" { RETURN } 
 	

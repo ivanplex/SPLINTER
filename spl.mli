@@ -38,4 +38,4 @@ val prettyPrint: ast -> string
 
 val string_of_typing: typing -> string
 
-val typeCheck: typeEnvironment -> ast -> typeEnvironment * checkingType
+val typeCheck: ast -> unit
