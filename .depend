@@ -1,0 +1,9 @@
+spl.cmi :
+streamparser.cmi : spl.cmi
+splparser.cmi : spl.cmi
+spl.cmo : spl.cmi
+streamlexer.cmo : streamparser.cmi
+spllexer.cmo : splparser.cmi
+main.cmo : spl.cmi streamparser.cmi splparser.cmi streamlexer.cmo spllexer.cmo
+streamparser.cmo : spl.cmi streamparser.cmi
+splparser.cmo : spl.cmi splparser.cmi

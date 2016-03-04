@@ -1,0 +1,24 @@
+int foo = 5;
+bool bar = false;
+
+void Init () {
+	return;
+}
+
+//Comment
+int Aux ( int x, bool y ) {
+	bar = /* Inline comment test * * ** /* */true;
+	return foo;
+}
+/*
+
+
+*/
+void Loop ( int list streamValues ) {
+	foo = 6;
+	return;
+}
+
+void Final () {
+	return;
+}
