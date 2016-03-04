@@ -22,6 +22,24 @@ type typeEnvironment =
 	| TypeEnv of typeBinding list * typeEnvironment
 	| Null
 
+type variable =
+	| IntVal of int32
+	| BoolVal of bool
+	| VoidVal
+	| ListVal of variable
+
+type evaluatorVar =
+	| ReturnedVal of variable
+	| Value of variable
+
+type binding =
+	Binding of string * variable ref
+
+type environment =
+	| Env of binding list * environment
+	| Null
+
+
 (* The type for the abstract syntax tree.  *)
 type ast =
 	(* Holds two subtrees, which should be executed one after
