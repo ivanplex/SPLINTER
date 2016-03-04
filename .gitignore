@@ -5,3 +5,11 @@
 *.exe
 splinterpreter.exe
 *.output
+mysplinterpreter
+spllexer.ml
+splparser.ml
+streamparser.mli
+splparser.mli
+streamparser.ml
+streamlexer.ml
+mysplinterpreter
