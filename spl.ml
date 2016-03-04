@@ -15,7 +15,26 @@ type typeEnvironment =
 	(* list of bindings in the env, reference to higher level env *)
 	| TypeEnv of typeBinding list * typeEnvironment
 	| Null
-	
+
+
+type variable =
+	| IntVal of int32
+	| BoolVal of bool
+	| VoidVal
+	| ListVal of variable
+
+type evaluatorVar =
+	| ReturnedVal of variable
+	| Value of variable
+
+type binding =
+	Binding of string * variable ref
+
+type environment =
+	| Env of binding list * environment
+	| Null
+
+
 type ast =
 	| Seq of ast * ast
 	| FuncDef of ast * ast * ast * ast (* name, return type declaration, params declaration, function body *)
@@ -203,3 +222,4 @@ let typeCheck ast =
 			*)
 	in let globalEnv = findGlobalVars ( TypeEnv( [], Null ) ) ast
 	in ignore( checkTypes globalEnv ast ); ()
+
