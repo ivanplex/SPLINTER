@@ -1,4 +1,4 @@
-/* === SPL Parser === */
+/*(* === SPL Parser === *)*/
 
 %{
 	open Spl
@@ -29,21 +29,21 @@
 %%
 
 main:
-	funcDefs ENDOFPROGRAM { $1 };
+	topLevelList ENDOFPROGRAM { $1 }
 
-/*(* TODO: rename funcDefs to something more accurate *)*/
-funcDefs:
-	| topLevelOperation funcDefs { Seq( $1, $2 ) }
-	| topLevelOperation { $1 };
+topLevelList:
+	| topLevelOperation topLevelList { Seq( $1, $2 ) }
+	| topLevelOperation { $1 }
 
 topLevelOperation:
 	| funcDef SEMICOLON { $1 }
-	| varInit SEMICOLON { $1 };
+	| funcDef { $1 }
+	| varInit SEMICOLON { $1 }
 
 funcDef:
 	| typeDec FUNCID funcDefParams funcDefBody {
 		FuncDef( FuncIdentifier( $2 ), TypeDec( $1 ), $3, $4 )
-	};
+	}
 
 funcDefParams:
 	| OPENPAREN paramList CLOSEPAREN { $2 }
@@ -65,6 +65,7 @@ exprList:
 	| expr { $1 }
 	| expr SEMICOLON { $1 }
 
+/*(* Expressions are valid within the body of the function *)*/
 expr:
 	| RETURN { ReturnStmt( Null ) }
 	| RETURN expr { ReturnStmt( $2 ) }
