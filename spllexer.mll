@@ -11,6 +11,10 @@ rule main = parse
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
 	| '~' { ENDOFPROGRAM }
+	| '+'      { PLUS }
+    | '-'      { MINUS }
+    | '*'      { TIMES }
+    | '/'      { DIV }
 	
 	| "return" { RETURN } 
 	

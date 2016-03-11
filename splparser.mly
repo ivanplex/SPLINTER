@@ -11,11 +11,15 @@
 %token <string>FUNCID
 %token <string>VARID
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
+%token PLUS MINUS TIMES DIV
 %token ENDOFPROGRAM
 
 %token RETURN
 %token <int32>INTLIT
 %token <bool>BOOLLIT
+
+%left PLUS MINUS
+%left TIMES DIV
 
 %left COMMA
 %left SEMICOLON
