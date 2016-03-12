@@ -39,6 +39,7 @@ type ast =
 	
 	(* type, name, expression *)
 	| VarInitialisation of ast * ast * ast
+	| ArrayLit of ast list
 
 val prettyPrint: ast -> string
 
