@@ -149,6 +149,11 @@ let prettyPrint tree =
 		
 		| Assignment( id, expr ) -> tabs i ^ ( aux i id ) ^ " = " ^ ( aux i expr ) ^ ";"
 		| VarInitialisation( typing, id, expr ) -> tabs i ^ ( aux i typing ) ^ " " ^ ( aux 0 ( Assignment( id, expr ) ) )
+		| ArrayLit( elementList ) -> let rec arrayAux = ( function
+				| [ element ] -> aux i element
+				| element :: tail -> ( aux i element ) ^ "," ^ ( arrayAux tail )
+				| [] -> "" )
+			in "[" ^ ( arrayAux elementList ) ^ "]"
 	in aux 0 tree
 
 (*
@@ -243,6 +248,16 @@ let typeCheck ast =
 			in let extendedEnv = addBindingToTypeEnv ( TypeBind( varName, getType declaredType ) ) envWithType
 			(* Code for assignments handles verifying that the expression is of the correct type *)
 			in checkTypes extendedEnv ( Assignment( nameAst, expr ) )
+		(* verify all elements are of the same type, return Type( List ( that_type ) ) *)
+		| ArrayLit( elementList ) -> let rec checkArrayElements = ( function
+				| elem :: tail -> let ( _, eType ) = checkTypes env elem
+					and tType = checkArrayElements tail
+					in ( match ( getType eType, tType ) with
+						| ( eType, tType ) when typingsEqual eType tType -> tType
+						| ( eType, Void ) -> eType
+						| ( _, _ ) -> raise (InvalidTyping ("Inconsistent typing within array")) )
+				| [] -> Void )
+			in env, Type( List( checkArrayElements elementList ) )
 		
 		
 	in let rec findGlobalVars globalEnv = function
@@ -259,7 +274,7 @@ let typeCheck ast =
 		
 		| TypeDec _ | FuncParams( _, _ ) | ParamDec( _, _ )
 		| VarIdentifier _ | FuncIdentifier _ | ReturnStmt _
-		| IntLit _ | BoolLit _ | Assignment( _, _ )
+		| IntLit _ | BoolLit _ | Assignment( _, _ ) | ArrayLit( _ )
 			-> raise InvalidTreeStructure
 			(* This function shouldn't be looking
 			inside function definitions, and so
