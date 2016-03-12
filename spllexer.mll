@@ -19,6 +19,8 @@ rule main = parse
     | '-'      { MINUS }
     | '*'      { TIMES }
     | '/'      { DIV }
+	| '[' { OPENARRAYLIT }
+	| ']' { CLOSEARRAYLIT }
 	
 	(* End the program either on the end of file, or a '~' character.
 	Entering a '~' is easier when writing the program directly into

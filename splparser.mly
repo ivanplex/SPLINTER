@@ -13,6 +13,7 @@
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
 %token PLUS MINUS TIMES DIV
 %token ENDOFPROGRAM
+%token OPENARRAYLIT CLOSEARRAYLIT
 
 %token RETURN
 %token <int32>INTLIT
@@ -77,6 +78,11 @@ expr:
 literal:
 	| INTLIT { IntLit $1 }
 	| BOOLLIT { BoolLit $1 }
+	| OPENARRAYLIT arrayContents CLOSEARRAYLIT { ArrayLit( $2 ) }
+
+arrayContents:
+	| expr { [ $1 ] }
+	| expr COMMA arrayContents { $1 :: $3 }
 
 typeDec:
 	| INTDEC { Int }
