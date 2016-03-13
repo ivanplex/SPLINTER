@@ -13,6 +13,9 @@ let _ = try
 		in let result = Splparser.main Spllexer.main lexbuf
 		(* Typecheck the program *)
 		in typeCheck result;
-		   print_string ( ( prettyPrint result ) ^ "\n" );
-		   flush stdout
+		print_string ( ( prettyPrint result ) ^ "\n" );
+		let globalEnv = populateEnvironmentInitialState (Env( [], [], Null )) result
+		in print_string "Done initialising global env\n";
+		print_string ( string_of_var ( executeFunction globalEnv "Init" [] ) );
+		flush stdout
 	with Parsing.Parse_error -> print_string "Syntax error\n"; flush stdout

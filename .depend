@@ -7,3 +7,4 @@ spllexer.cmo : splparser.cmi
 main.cmo : spl.cmi streamparser.cmi splparser.cmi streamlexer.cmo spllexer.cmo
 streamparser.cmo : spl.cmi streamparser.cmi
 splparser.cmo : spl.cmi splparser.cmi
+mysplinterpreter : main.cmo

@@ -1,8 +1,8 @@
 int foo = 5;
 bool bar = false;
 
-void Init () {
-	return;
+int Init () {
+	return foo;
 }
 
 //Comment
@@ -14,9 +14,9 @@ int Aux ( int x, bool y ) {
 
 
 */
-void Loop ( int list streamValues ) {
+int Loop ( int list streamValues ) {
 	foo = 6;
-	return;
+	return foo;
 }
 
 void Final () {
