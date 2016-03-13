@@ -62,6 +62,13 @@ type ast =
 	(* type, name, expression *)
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
+	
+	(* left side * right side *)
+	| Plus of ast * ast
+	| Minus of ast * ast
+	| Times of ast * ast
+	| Div of ast * ast
+
 
 type funcBinding = 
 	FuncBinding of string * ast (* should be the FuncDef ast node *)

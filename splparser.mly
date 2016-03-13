@@ -74,6 +74,10 @@ expr:
 	| varInit { $1 }
 	| varName { $1 }
 	| varAssign { $1 }
+	| expr PLUS expr { Plus( $1, $3 ) }
+	| expr MINUS expr { Minus( $1, $3 ) }
+	| expr TIMES expr { Times( $1, $3 ) }
+	| expr DIV expr { Div( $1, $3 ) }
 
 literal:
 	| INTLIT { IntLit $1 }

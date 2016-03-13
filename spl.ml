@@ -63,6 +63,12 @@ type ast =
 	(* type, name, expression *)
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
+	
+	(* left side * right side *)
+	| Plus of ast * ast
+	| Minus of ast * ast
+	| Times of ast * ast
+	| Div of ast * ast
 
 type funcBinding = 
 	FuncBinding of string * ast (* should be the FuncDef ast node *)
@@ -210,6 +216,11 @@ let prettyPrint tree =
 				| element :: tail -> ( aux i element ) ^ "," ^ ( arrayAux tail )
 				| [] -> "" )
 			in "[" ^ ( arrayAux elementList ) ^ "]"
+		| Plus( left, right ) -> aux i left ^ " + " ^ aux i right
+		| Minus( left, right ) -> aux i left ^ " - " ^ aux i right
+		| Times( left, right ) -> aux i left ^ " * " ^ aux i right
+		| Div( left, right ) -> aux i left ^ " / " ^ aux i right
+		
 	in aux 0 tree
 
 (*
@@ -314,7 +325,15 @@ let typeCheck ast =
 						| ( _, _ ) -> raise (InvalidTyping ("Inconsistent typing within array")) )
 				| [] -> Void )
 			in env, Type( List( checkArrayElements elementList ) )
-		
+		(* Type check all of the integer operations the same way *)
+		| Plus( leftSide, rightSide ) | Minus( leftSide, rightSide )
+		| Times( leftSide, rightSide ) | Div( leftSide, rightSide )
+				-> let envWithLeftSide, leftType = checkTypes env leftSide
+				in let envWithBothSides, rightType = checkTypes envWithLeftSide rightSide
+				in ( match leftType, rightType with
+					| Type Int, Type Int -> envWithBothSides, Type Int
+					| Type _, Type _ -> raise ( InvalidTyping "Attempted to add non-integer value" )
+					| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot add a returned value" ) )
 		
 	in let rec findGlobalVars globalEnv = function
 		| Seq( childA, childB ) -> findGlobalVars ( findGlobalVars globalEnv childA ) childB
@@ -377,6 +396,28 @@ let rec eval env = function
 	| FuncParams( _, _ ) | ParamDec( _, _ ) 
 	| TypeDec _ | Null | FuncIdentifier _
 		-> env, Value VoidVal
+	
+	| Plus( left, right ) -> let envWithLeft, leftValue = eval env left
+		in let envWithRight, rightValue = eval envWithLeft right
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.add leftInt rightInt ) )
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating plus" ) )
+	| Minus( left, right ) -> let envWithLeft, leftValue = eval env left
+		in let envWithRight, rightValue = eval envWithLeft right
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.sub leftInt rightInt ) )
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating minus" ) )
+	| Times( left, right ) -> let envWithLeft, leftValue = eval env left
+		in let envWithRight, rightValue = eval envWithLeft right
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.mul leftInt rightInt ) )
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating times" ) )
+	| Div( left, right ) -> let envWithLeft, leftValue = eval env left
+		in let envWithRight, rightValue = eval envWithLeft right
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) )
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating div" ) )
+ 
 
 let flattenParamDecs params = let rec aux acc = function
 		| ParamDec( _, _ ) as param -> param :: acc
