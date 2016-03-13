@@ -26,7 +26,7 @@ type variable =
 	| IntVal of int32
 	| BoolVal of bool
 	| VoidVal
-	| ListVal of variable
+	| ListVal of variable array 
 
 type evaluatorVar =
 	| ReturnedVal of variable
@@ -35,9 +35,6 @@ type evaluatorVar =
 type binding =
 	Binding of string * variable ref
 
-type environment =
-	| Env of binding list * environment
-	| Null
 
 
 (* The type for the abstract syntax tree.  *)
@@ -45,7 +42,8 @@ type ast =
 	(* Holds two subtrees, which should be executed one after
 	another *)
 	| Seq of ast * ast
-	| FuncDef of ast * ast * ast * ast (* name, return type declaration, params declaration, function body *)
+	(* name, return type declaration, params declaration, function body *)
+	| FuncDef of ast * ast * ast * ast
 	| TypeDec of typing
 	(* Used as a placeholder *)
 	| Null
@@ -66,11 +64,69 @@ type ast =
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
 
+type funcBinding = 
+	FuncBinding of string * ast (* should be the FuncDef ast node *)
+
+type environment =
+	| Env of binding list * funcBinding list * environment
+	| Null
 
 
 exception InvalidTyping of string
 exception UnboundVariable of string
-exception InvalidTreeStructure
+exception InvalidTreeStructure of string * ast
+exception NullEnvironment
+exception IncorrectNumberOfParameters
+
+let rec string_of_var = function
+	| IntVal num -> Int32.to_string num
+	| BoolVal boolean -> string_of_bool boolean
+	| VoidVal -> "void"
+	| ListVal values -> let rec aux = function
+			| [ value ] -> string_of_var value
+			| value :: tail -> string_of_var value ^ ", " ^ aux tail
+			| [] -> ""
+		in "[ " ^ aux ( Array.to_list values ) ^ " ]"
+
+let rec varLookup env name = let rec aux = function
+		| Binding( varName, valRef ) :: _ when ( String.compare varName name ) == 0
+			-> valRef
+		| _ :: tail -> aux tail
+		| [] -> raise (UnboundVariable name)
+	in let varBindings, parentEnv = match env with
+		| Env( varBindings, _, parentEnv ) -> varBindings, parentEnv
+		| Null -> raise ( UnboundVariable name )
+	in try aux varBindings
+	with UnboundVariable _ -> varLookup parentEnv name
+
+let rec funcLookup env name = let rec aux = function
+		| FuncBinding( funcName, func ) :: _ when ( String.compare funcName name ) == 0
+			-> func
+		| _ :: tail -> aux tail
+		| [] -> raise (UnboundVariable name)
+	in let funcBindings, parentEnv = match env with
+		| Env( _, funcBindings, parentEnv ) -> funcBindings, parentEnv
+		| Null -> raise ( UnboundVariable name )
+	in try aux funcBindings
+	with UnboundVariable _ -> funcLookup parentEnv name
+
+let addFuncToEnv env funcDef = let name = match funcDef with
+		| FuncDef( FuncIdentifier name, _, _, _ ) -> name
+		| node -> raise ( InvalidTreeStructure ( "Unexpected function structure in addFuncToEnv", node ) )
+	in let vars, funcs, parent = match env with
+		| Env( vars, funcs, parent ) -> vars, funcs, parent
+		| Null -> raise NullEnvironment
+	in Env( vars, FuncBinding( name, funcDef ) :: funcs, parent )
+
+let addVarToEnv env name value = let vars, funcs, parent = match env with
+		| Env( vars, funcs, parent ) -> vars, funcs, parent
+		| Null -> raise NullEnvironment
+	in Env( Binding( name, ref value ) :: vars, funcs, parent )
+
+let rec getGlobalEnv = function
+	| Env( _, _, parent ) as env -> ( try getGlobalEnv parent
+		with NullEnvironment -> env )
+	| Null -> raise NullEnvironment
 
 (* lookup the type of a variable in the type environment *)
 (* Will throw an UnboundVariable exception if the variable does
@@ -193,7 +249,7 @@ let typeCheck ast =
 				| ( TypeDec Void, Type _ ) -> ( env, Type Void )
 				(* The function has a type other than void, but doesn't return a value *)
 				| ( TypeDec ta, _ ) -> raise ( InvalidTyping  ( "function "^( prettyPrint name )^" does not return a value, but is declared as type " ^ ( string_of_typing ta ) ) )
-				| ( _, _ ) -> raise InvalidTreeStructure )
+				| ( typeNode, _ ) -> raise ( InvalidTreeStructure ( "Unexpected values type-checking FuncDef node", typeNode ) ) )
 		| TypeDec( t ) -> ( env, ( Type t ) )
 		
 		(* List of function parameters. We don't need to check or return values here, but
@@ -209,7 +265,7 @@ let typeCheck ast =
 			-> let ( _, paramType ) = checkTypes env typeAst
 			in let nameAsString = match paramName with
 				| VarIdentifier str -> str
-				| _ -> raise InvalidTreeStructure
+				| node -> raise ( InvalidTreeStructure ( "Non-VarIdentifier ast node as name in VarIdentifier", node)  )
 			in ( match getType paramType with
 				| Void -> raise ( InvalidTyping "parameters cannot be void" )
 				| t -> ( addBindingToTypeEnv ( TypeBind( nameAsString, t ) ) env, Type t ) ) (* accept anything else *)
@@ -237,13 +293,13 @@ let typeCheck ast =
 			in if typingsEqual ( getType varType ) ( getType expType )
 				then postTypeEnv, varType
 				else raise ( InvalidTyping ( "Attempted to assign " ^ string_of_checktype expType ^ " value to " ^ string_of_checktype varType ^ " variable: " ^ prettyPrint varName ) )
-		
+		 
 		(* Bind a new variable to its type in the current environment *)
 		(* Check that its initial value matches the type it has been declared as *)
 		| VarInitialisation( declaredTypeAst, nameAst, expr )
 			-> let varName = match nameAst with
 				| VarIdentifier str -> str
-				| _ -> raise InvalidTreeStructure
+				| node -> raise ( InvalidTreeStructure ( "Non-VarIdentifier name ast node in VarInitialisation", node ) )
 			in let ( envWithType, declaredType ) = checkTypes env declaredTypeAst
 			in let extendedEnv = addBindingToTypeEnv ( TypeBind( varName, getType declaredType ) ) envWithType
 			(* Code for assignments handles verifying that the expression is of the correct type *)
@@ -266,19 +322,87 @@ let typeCheck ast =
 		| VarInitialisation( typeAst, nameAst, expression )
 			-> let varName = match nameAst with
 				| VarIdentifier str -> str
-				| _ -> raise InvalidTreeStructure
+				| node -> raise ( InvalidTreeStructure ( "Non-VarIdentifier ast node as name in VarInitialisation", node ) )
 			in let ( _, varType ) = checkTypes globalEnv typeAst
 			in addBindingToTypeEnv ( TypeBind( varName, getType varType ) ) globalEnv
 		
 		| FuncDef( _, _, _, _ ) | Null -> globalEnv
 		
-		| TypeDec _ | FuncParams( _, _ ) | ParamDec( _, _ )
-		| VarIdentifier _ | FuncIdentifier _ | ReturnStmt _
-		| IntLit _ | BoolLit _ | Assignment( _, _ ) | ArrayLit( _ )
-			-> raise InvalidTreeStructure
+		| node
+			-> raise ( InvalidTreeStructure ( "Unexpected ast node when finding global variables for type checking", node ) )
 			(* This function shouldn't be looking
 			inside function definitions, and so
 			shouldn't encounter these node types
 			*)
 	in let globalEnv = findGlobalVars ( TypeEnv( [], Null ) ) ast
 	in ignore( checkTypes globalEnv ast ); ()
+	
+let rec eval env = function
+	| Seq( leftSide, rightSide ) -> ( match eval env leftSide with
+			| envWithLeftSide, ( ReturnedVal _ as t ) -> envWithLeftSide, t
+			| envWithLeftSide, Value _ -> eval envWithLeftSide rightSide )
+	| FuncDef( funcId, declaredType, params, body ) as def
+		-> addFuncToEnv env def, Value VoidVal
+	| VarIdentifier name -> env, Value !( varLookup env name )
+	| ReturnStmt exp -> let envWithValue, value = eval env exp
+		in let rtnVal = match value with
+			| Value variable -> ReturnedVal variable
+			| ReturnedVal _ -> raise ( InvalidTyping "Cannot return an already returned value" )
+		in envWithValue, rtnVal
+	| IntLit value -> env, Value ( IntVal value )
+	| BoolLit value -> env, Value ( BoolVal value )
+	| ArrayLit exprsList -> let rec evalElements env = function
+			| expr :: tail -> let envWithElement, value = match eval env expr with
+					| env, Value v -> env, v
+					| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return inside a list" )
+				in let envWithTail, valueTail = evalElements envWithElement tail
+				in envWithTail, ( value :: valueTail )
+			| [] -> env, []
+		in let ( envWithElements, elementList ) = evalElements env exprsList
+		in envWithElements, Value ( ListVal ( Array.of_list elementList ) )
+	| Assignment( VarIdentifier( name ), expr )
+		-> let envWithExpr, value = match eval env expr with
+			| exp, Value v -> exp, v
+			| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return when performing an assignment" )
+		in ( varLookup env name ) := value;
+		envWithExpr, Value value
+	| Assignment( _, _ ) as node -> raise ( InvalidTreeStructure ( "Assignment with non-VarIdentifier as name ast", node ) )
+	| VarInitialisation( _, VarIdentifier( name ), expr )
+		-> let envWithValue, value = match eval env expr with
+			| env, Value v -> env, v
+			| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return when initialising a variable" )
+		in addVarToEnv envWithValue name value, Value( value )
+	| VarInitialisation( _, _, _ ) as node -> raise ( InvalidTreeStructure ( "VarInitialisation with non-VarIdentifier as name ast", node ) )
+	
+	| FuncParams( _, _ ) | ParamDec( _, _ ) 
+	| TypeDec _ | Null | FuncIdentifier _
+		-> env, Value VoidVal
+
+let flattenParamDecs params = let rec aux acc = function
+		| ParamDec( _, _ ) as param -> param :: acc
+		| FuncParams( leftBranch, rightBranch )
+			-> let accWithLeft = aux acc leftBranch
+			in aux accWithLeft rightBranch
+		| Null -> acc
+		| node -> raise ( InvalidTreeStructure ( "Unexpected ast node when flattening param declarations", node ) )
+	in aux [] params
+
+let populateEnvironmentInitialState env ast =
+	let populatedEnv, _ = eval env ast
+	in populatedEnv
+
+let executeFunction env funcName paramList =
+	let paramDeclarations, functionBody = match funcLookup env funcName with
+		| FuncDef( _, _, paramDeclarations, functionBody ) -> paramDeclarations, functionBody
+		| node -> raise ( InvalidTreeStructure ( "Received non-FuncDef ast from funcLookup", node ) )
+	in let rec addParameterBindings env paramDeclarations paramList =
+		match paramDeclarations, paramList with
+			| ( ParamDec( _, VarIdentifier name ) :: decsTail, value :: valuesTail )
+				-> addParameterBindings ( addVarToEnv env name value ) decsTail valuesTail
+			| ( node :: _, _ :: _ ) -> raise ( InvalidTreeStructure ( "Invalid parameter structure when assigning parameter values", node ) )
+			| ( [], [] ) -> env
+			| ( _ :: _, [] ) | ( [], _ :: _ ) -> raise IncorrectNumberOfParameters
+	in let localEnv = addParameterBindings (Env( [], [], getGlobalEnv env )) ( flattenParamDecs paramDeclarations ) paramList
+	in match eval localEnv functionBody with
+		| _, Value v -> VoidVal
+		| _, ReturnedVal v -> v
