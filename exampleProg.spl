@@ -1,29 +1,11 @@
-int foo = 5;
-bool bar = false;
-int list values = [2,5,3,6,9];
-int i = 0;
-
 void Init () {
 	int list arr = [5];
 	arr[0] = 2;
-	output [ arr[0] ];
+	arr[1] = 7;
+	output arr;
 }
 
-//Comment
-int Aux ( int x, bool y ) {
-	bar = /* Inline comment test * * ** /* */true;
-	return foo;
-}
-/*
-
-
-*/
-int Loop ( int list streamValues ) {
-	foo = 6;
-	output [ values[i] ];
-	i = i + 1;
-	return foo;
-}
+void Loop ( int list streamValues ) {}
 
 void Final () {
 	return;

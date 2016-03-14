@@ -26,7 +26,7 @@ type variable =
 	| IntVal of int32
 	| BoolVal of bool
 	| VoidVal
-	| ListVal of variable array 
+	| ListVal of int ref * variable array ref
 
 type evaluatorVar =
 	| ReturnedVal of variable

@@ -1,4 +1,4 @@
-//Problem 1 - append
+//Problem 1 - Prefix
 //Append 0 to the start of the stream
 
 void Init() {

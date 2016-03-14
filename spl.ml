@@ -26,7 +26,7 @@ type variable =
 	| IntVal of int32
 	| BoolVal of bool
 	| VoidVal
-	| ListVal of variable array 
+	| ListVal of int ref * variable array ref (* int value is length *)
 
 type evaluatorVar =
 	| ReturnedVal of variable
@@ -87,6 +87,7 @@ exception InvalidTreeStructure of string * ast
 exception NullEnvironment
 exception IncorrectNumberOfParameters
 exception InvalidStream of string
+exception ListIndexOutOfBounds
 
 let checkStreamLengths stream =
 	let rec aux = function
@@ -118,11 +119,11 @@ let rec string_of_var = function
 	| IntVal num -> Int32.to_string num
 	| BoolVal boolean -> string_of_bool boolean
 	| VoidVal -> "void"
-	| ListVal values -> let rec aux = function
+	| ListVal( length, arrRef ) -> let rec aux = function
 			| [ value ] -> string_of_var value
 			| value :: tail -> string_of_var value ^ ", " ^ aux tail
 			| [] -> ""
-		in "[ " ^ aux ( Array.to_list values ) ^ " ]"
+		in "[ " ^ aux ( Array.to_list !arrRef ) ^ " ]"
 
 let rec varLookup env name = let rec aux = function
 		| Binding( varName, valRef ) :: _ when ( String.compare varName name ) == 0
@@ -394,13 +395,24 @@ let typeCheck ast =
 		
 		| node
 			-> raise ( InvalidTreeStructure ( "Unexpected ast node when finding global variables for type checking", node ) )
-			(* This function shouldn't be looking
+			(* This function shouldn't be looking 
 			inside function definitions, and so
-			shouldn't encounter these node types
-			*)
+			shouldn't encounter these node types *)
 	in let globalEnv = findGlobalVars ( TypeEnv( [], Null ) ) ast
 	in ignore( checkTypes globalEnv ast ); ()
-	
+
+let extendArray len arrRef reqLen = 
+	if Array.length !arrRef >= reqLen
+	then ( if reqLen > !len
+		then ( len := reqLen )
+		else () )
+	else ( let newArr = Array.make reqLen VoidVal
+	in for i = 0 to !len - 1 do
+		newArr.(i) <- !arrRef.(i)
+	done; 
+	arrRef := newArr;
+	len := reqLen )
+
 let rec eval env ast outputStreamAcc = match ast with
 	| Seq( leftSide, rightSide ) -> ( match eval env leftSide outputStreamAcc with
 			| envWithLeftSide, ( ReturnedVal _ as t ), outputStream -> envWithLeftSide, t, outputStream
@@ -415,10 +427,10 @@ let rec eval env ast outputStreamAcc = match ast with
 		in envWithValue, rtnVal, outputStream
 	| OutputStmt exp -> let envWithValue, value, outputStreamWithValue = eval env exp outputStreamAcc
 		in let appendedOutputStream = match value with
-			| Value( ListVal values ) -> let varToInt32 = function
+			| Value( ListVal( length, values ) ) -> let varToInt32 = function
 					| IntVal value -> value
 					| _ -> raise ( InvalidTyping "Can only output a list of ints to the output stream" )
-				in let output = List.map varToInt32 ( Array.to_list values )
+				in let output = List.map varToInt32 ( Array.to_list !values )
 				in output :: outputStreamWithValue
 			| _ -> raise ( InvalidTyping "Can only output a list of ints to the output stream" )
 		in envWithValue, value, appendedOutputStream
@@ -432,16 +444,17 @@ let rec eval env ast outputStreamAcc = match ast with
 				in envWithTail, ( value :: valueTail ), outputStreamWithTail
 			| [] -> env, [], outputStreamAcc
 		in let envWithElements, elementList, outputStreamWithElements = evalElements env exprsList outputStreamAcc
-		in envWithElements, Value ( ListVal ( Array.of_list elementList ) ), outputStreamWithElements
+		in envWithElements, Value ( ListVal( ref ( List.length elementList ), ref ( Array.of_list elementList ) ) ), outputStreamWithElements
 	| ArrayIndex( arr, idx ) -> let envWithArr, arrayVar, outputStreamWithArr = eval env arr outputStreamAcc
 		in let envWithIdx, idxVar, outputStreamWithIdx = eval envWithArr idx outputStreamWithArr
-		in let listArr = match arrayVar with
-			| Value( ListVal arr ) -> arr
+		in let listLen, listArr = match arrayVar with
+			| Value( ListVal( length, arr ) ) -> !length, !arr
 			| _ -> raise ( InvalidTyping "Cannot index a non-array variable" )
 		in let idxInt = match idxVar with
 			| Value( IntVal i ) -> Int32.to_int i
 			| _ -> raise ( InvalidTyping "Cannot index an array with a non-int" )
-		in envWithIdx, Value( listArr.( idxInt) ), outputStreamWithIdx
+		in if listLen >= idxInt then envWithIdx, Value( listArr.( idxInt ) ), outputStreamWithIdx
+		else raise ListIndexOutOfBounds
 	| Assignment( VarIdentifier( name ), expr )
 		-> let envWithExpr, value, outputStreamWithExpr = match eval env expr outputStreamAcc with
 			| exp, Value v, output -> exp, v, output
@@ -452,8 +465,8 @@ let rec eval env ast outputStreamAcc = match ast with
 		-> let envWithArr, arrayVar, outputStreamWithArr = eval env arr outputStreamAcc
 		in let envWithIdx, idxVar, outputStreamWithIdx = eval envWithArr idx outputStreamWithArr
 		in let envWithExp, valueVar, outputStreamWithExpr = eval envWithIdx exp outputStreamWithIdx
-		in let listArr = match arrayVar with
-			| Value( ListVal arr ) -> arr
+		in let listLen, listArr = match arrayVar with
+			| Value( ListVal( len, arr ) ) -> len, arr
 			| _ -> raise ( InvalidTyping "Cannot index a non-array variable" )
 		in let idxInt = match idxVar with
 			| Value( IntVal i ) -> Int32.to_int i
@@ -461,10 +474,11 @@ let rec eval env ast outputStreamAcc = match ast with
 		in let value = match valueVar with
 			| Value x -> x
 			| ReturnedVal _ -> raise ( InvalidTyping "Cannot assign a returned value" )
-		in listArr.( idxInt ) <- value;
+		in extendArray listLen listArr ( idxInt + 1 );
+		!listArr.( idxInt ) <- value;
 		envWithExp, valueVar, outputStreamWithExpr
 		
-	| Assignment( _, _ ) as node -> raise ( InvalidTreeStructure ( "Assignment with non-VarIdentifier as name ast", node ) )
+	| Assignment( _, _ ) as node -> raise ( InvalidTreeStructure ( "Invalid expression in left hand side of assignment ", node ) )
 	| VarInitialisation( _, VarIdentifier( name ), expr )
 		-> let envWithValue, value, outputStreamWithValue = match eval env expr outputStreamAcc with
 			| env, Value v, output -> env, v, output

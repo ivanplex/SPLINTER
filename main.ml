@@ -25,7 +25,8 @@ let rec int32listToVariableList = function
 
 let rec loopThroughInput globalEnv inputStream outputStream = match inputStream with
 	| inputList :: tail
-		-> let _, newOutputStream = executeFunction globalEnv "Loop" [ ListVal ( Array.of_list ( int32listToVariableList inputList ) ) ] outputStream
+		-> let streamData = Array.of_list ( int32listToVariableList inputList )
+		in let _, newOutputStream = executeFunction globalEnv "Loop" [ ListVal( ref( Array.length streamData ), ref streamData ) ] outputStream
 		in loopThroughInput globalEnv tail newOutputStream
 	| [] -> outputStream
 

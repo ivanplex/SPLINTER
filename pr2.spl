@@ -1,4 +1,4 @@
-//Problem 2 - Doubling
+//Problem 2 - Copying
 //Take 1 stream, and produce two streams identical to the input
 
 void Init() {}
