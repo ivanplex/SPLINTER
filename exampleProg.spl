@@ -2,6 +2,11 @@ int i = 2;
 int list  a = [1,2,3];
 
 void Init () {
+	int foo = 2;
+	if !false || !true {
+		foo = 3;
+	};
+	output [foo+9000];
 }
 
 void Loop ( int list streamValues ) {
@@ -14,5 +19,5 @@ void Loop ( int list streamValues ) {
 }
 
 void Final () {
-	output [ #a ];
+	output [ #a + 1 ];
 }

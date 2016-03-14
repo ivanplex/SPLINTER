@@ -28,6 +28,9 @@ rule main = parse
 	| '[' { OPENSQUAREBRACKET }
 	| ']' { CLOSESQUAREBRACKET }
 	| '#' { LISTLENGTHOP }
+	| "&&" { BOOLAND }
+	| "||" { BOOLOR }
+	| '!' { BOOLNOT }
 	
 	(* End the program either on the end of file, or a '~' character.
 	Entering a '~' is easier when writing the program directly into

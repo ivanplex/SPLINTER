@@ -79,6 +79,10 @@ type ast =
 	| CompareLessEqual of ast * ast (* Greater than or Equal to is handled as above *)
 	| CompareNotEqual of ast * ast
 	
+	| BooleanAnd of ast * ast
+	| BooleanOr of ast * ast
+	| BooleanNot of ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 

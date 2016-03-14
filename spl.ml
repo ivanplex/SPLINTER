@@ -79,6 +79,10 @@ type ast =
 	| CompareLessEqual of ast * ast (* Greater than or Equal to is handled as above *)
 	| CompareNotEqual of ast * ast
 	
+	| BooleanAnd of ast * ast
+	| BooleanOr of ast * ast
+	| BooleanNot of ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 
@@ -268,6 +272,10 @@ let prettyPrint tree =
 		| CompareLessEqual( left, right ) -> "( " ^ aux i left ^ " <= " ^ aux i right ^ " )"
 		| CompareNotEqual( left, right ) -> "( " ^ aux i left ^ " != " ^ aux i right ^ " )"
 		
+		| BooleanAnd( left, right ) -> "( " ^ aux i left ^ " && " ^ aux i right ^ " )"
+		| BooleanOr( left, right ) -> "( " ^ aux i left ^ " || " ^ aux i right ^ " )"
+		| BooleanNot( exp ) -> "!(" ^ aux i exp ^ ")"
+		
 		| ArrayIndex( arr, idx ) -> aux i arr ^ "[" ^ aux i idx ^ "]"
 		| ArrayLength( arr ) -> "#(" ^ aux i arr ^ ")"
 		
@@ -424,6 +432,19 @@ let typeCheck ast =
 				| Type Int, Type Int -> envWithBothSides, Type Bool
 				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot compare returned values" )
 				| Type _, Type _ -> raise ( InvalidTyping "Can only use <, >, <=, >= to compare ints" ) )
+		
+		| BooleanAnd( left, right ) | BooleanOr( left, right ) -> let envWithLeftSide, leftType = checkTypes env left
+			in let envWithBothSides, rightType = checkTypes envWithLeftSide right
+			in ( match leftType, rightType with
+				| Type Bool, Type Bool -> envWithBothSides, Type Bool
+				| Type _, Type _ -> raise ( InvalidTyping "Cannot perform boolean or/and on non-boolean variables" )
+				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot perform boolean or/and on returned values" ) )
+		
+		| BooleanNot exp -> let envWithExp, expType = checkTypes env exp
+			in ( match expType with
+				| Type Bool -> envWithExp, Type Bool
+				| Type _ -> raise ( InvalidTyping "Can only perform boolean not on bool values" )
+				| ReturnType _ -> raise ( InvalidTyping "Cannot perform boolean not on returned values" ) )
 		
 		| If( condition, consequent, alternative ) -> let envWithCond = match checkTypes env condition with
 				| env, Type Bool -> env
@@ -597,6 +618,21 @@ let rec eval env ast outputStreamAcc = match ast with
 			| Value( IntVal l ), Value( IntVal r ) -> envWithRight, Value( BoolVal( l <= r ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Invalid types in left/right side of inequality check (<=/>=)" ) )
 	
+	| BooleanAnd( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( BoolVal l ), Value( BoolVal r ) -> envWithRight, Value( BoolVal( l && r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of boolean and (&&)" ) )
+	| BooleanOr( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( BoolVal l ), Value( BoolVal r ) -> envWithRight, Value( BoolVal( l || r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of boolean and (&&)" ) )
+	| BooleanNot( exp ) -> let envWithExp, expValue, outputStreamWithExp = eval env exp outputStreamAcc
+		in ( match expValue with
+			| Value( BoolVal v ) -> envWithExp, Value( BoolVal ( not v ) ), outputStreamWithExp
+			| _ -> raise ( InvalidTyping "Invalid types in boolean not (!)" ) )
+		
 	| If( condition, consequent, alternative ) -> let envWithCond, condVal, outputStreamWithCond = eval env condition outputStreamAcc
 		in let performCons = match condVal with
 			| Value( BoolVal b ) -> b
