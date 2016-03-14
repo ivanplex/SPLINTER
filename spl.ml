@@ -55,6 +55,8 @@ type ast =
 	| FuncIdentifier of string
 	
 	| ReturnStmt of ast
+	| OutputStmt of ast
+	
 	| IntLit of int32
 	| BoolLit of bool
 	
@@ -233,6 +235,8 @@ let prettyPrint tree =
 		| Null -> ""
 		
 		| ReturnStmt( tree ) -> tabs i ^ "return " ^ ( aux i tree ) ^ ";"
+		| OutputStmt( tree ) -> tabs i ^ "output " ^ ( aux i tree ) ^ ";"
+		
 		| IntLit( value ) -> Int32.to_string value
 		| BoolLit( value ) -> string_of_bool value
 		
@@ -317,6 +321,11 @@ let typeCheck ast =
 		| ReturnStmt( exp ) -> ( match checkTypes env exp with
 			| ( env2, Type t ) -> ( env2, ReturnType t )
 			| ( _, ReturnType _ ) -> raise ( InvalidTyping "Cannot return an already returned value" ) )
+		| OutputStmt( exp ) -> ( match checkTypes env exp with
+			| env2, Type( List( Int ) ) -> env2, Type( List( Int ) )
+			| _, Type _ -> raise ( InvalidTyping "Can only output a list of ints" )
+			| _, ReturnType _ -> raise ( InvalidTyping "Cannot output a returned value" ) )
+		
 		
 		| IntLit _ -> ( env, Type Int )
 		| BoolLit _ -> ( env, Type Bool )
@@ -395,6 +404,15 @@ let rec eval env ast outputStreamAcc = match ast with
 			| Value variable -> ReturnedVal variable
 			| ReturnedVal _ -> raise ( InvalidTyping "Cannot return an already returned value" )
 		in envWithValue, rtnVal, outputStream
+	| OutputStmt exp -> let envWithValue, value, outputStreamWithValue = eval env exp outputStreamAcc
+		in let appendedOutputStream = match value with
+			| Value( ListVal values ) -> let varToInt32 = function
+					| IntVal value -> value
+					| _ -> raise ( InvalidTyping "Can only output a list of ints to the output stream" )
+				in let output = List.map varToInt32 ( Array.to_list values )
+				in output :: outputStreamWithValue
+			| _ -> raise ( InvalidTyping "Can only output a list of ints to the output stream" )
+		in envWithValue, value, appendedOutputStream
 	| IntLit value -> env, Value ( IntVal value ), outputStreamAcc
 	| BoolLit value -> env, Value ( BoolVal value ), outputStreamAcc
 	| ArrayLit exprsList -> let rec evalElements env tail outputStreamAcc = match tail with

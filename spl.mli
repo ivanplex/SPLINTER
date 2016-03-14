@@ -54,6 +54,9 @@ type ast =
 	| FuncIdentifier of string
 	
 	| ReturnStmt of ast
+	| OutputStmt of ast
+	
+	
 	| IntLit of int32
 	| BoolLit of bool
 	

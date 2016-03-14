@@ -2,6 +2,7 @@ int foo = 5;
 bool bar = false;
 
 int Init () {
+	output [ 2 ];
 	return 8 * 2 + 3 * 4;
 }
 
@@ -16,6 +17,7 @@ int Aux ( int x, bool y ) {
 */
 int Loop ( int list streamValues ) {
 	foo = 6;
+	output streamValues;
 	return foo;
 }
 

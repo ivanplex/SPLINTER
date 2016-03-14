@@ -19,6 +19,16 @@ let parseProgram splLexbuf = try
 	| Failure( message )
 		-> ( print_string ( "failure in parsing program\n" ^ message ^ "\n" ); flush stdout; raise SyntaxError )
 
+let rec int32listToVariableList = function
+	| value :: tail -> IntVal value :: int32listToVariableList tail
+	| [] -> []
+
+let rec loopThroughInput globalEnv inputStream outputStream = match inputStream with
+	| inputList :: tail
+		-> let _, newOutputStream = executeFunction globalEnv "Loop" [ ListVal ( Array.of_list ( int32listToVariableList inputList ) ) ] outputStream
+		in loopThroughInput globalEnv tail newOutputStream
+	| [] -> outputStream
+
 let _ = try
 		(* Open the channel from which the program will be read *)
 		let splLexbuf = if Array.length Sys.argv > 1 
@@ -34,7 +44,9 @@ let _ = try
 		let streamLexbuf = Lexing.from_channel stdin
 		in let stream = parseStream streamLexbuf
 		in let _, outputStreamWithInit = executeFunction globalEnv "Init" [] []
-		in checkStreamLengths outputStreamWithInit;
-		print_string ( string_of_stream outputStreamWithInit );
+		in let outputStreamWithLoop = loopThroughInput globalEnv stream outputStreamWithInit
+		in let _, outputStreamWithFinal = executeFunction globalEnv "Final" [] outputStreamWithLoop
+		in checkStreamLengths outputStreamWithFinal;
+		print_string ( string_of_stream ( List.rev outputStreamWithFinal ) );
 		flush stdout
 	with Parsing.Parse_error -> print_string "Syntax error\n"; flush stdout

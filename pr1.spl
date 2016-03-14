@@ -1,0 +1,12 @@
+//Problem 1 - append
+//Append 0 to the start of the stream
+
+void Init() {
+	output [ 0 ];
+}
+
+void Loop( int list input ) {
+	output input;
+}
+
+void Final() {}

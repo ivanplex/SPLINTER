@@ -14,6 +14,7 @@
 %token PLUS MINUS TIMES DIV
 %token ENDOFPROGRAM
 %token OPENARRAYLIT CLOSEARRAYLIT
+%token OUTPUT
 
 %token RETURN
 %token <int32>INTLIT
@@ -70,6 +71,7 @@ exprList:
 expr:
 	| RETURN { ReturnStmt( Null ) }
 	| RETURN expr { ReturnStmt( $2 ) }
+	| OUTPUT expr { OutputStmt( $2 ) }
 	| literal { $1 }
 	| varInit { $1 }
 	| varName { $1 }

@@ -28,6 +28,7 @@ rule main = parse
 	| '~' | eof { ENDOFPROGRAM }
 	
 	| "return" { RETURN } 
+	| "output" { OUTPUT }
 	
 	(* | ( ( ( "int" | "bool" | "void" ) " list"* ) as typing ) " list" { TYPE( List( typing ) } *)
 	| "int" { INTDEC }
