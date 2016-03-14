@@ -6,6 +6,7 @@
 
 %token SEMICOLON COMMA
 %token ASSIGN
+%token ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV
 /*(* %token <typing>TYPE *)*/
 %token INTDEC BOOLDEC VOIDDEC LISTDEC
 %token <string>FUNCID
@@ -130,10 +131,16 @@ typeDec:
 varInit:
 	| typeDec varName ASSIGN expr { VarInitialisation( TypeDec( $1 ), $2, $4 ) }
 
+assignLhs:
+	| varName { $1 }
+	| arrayIndex { $1 }
+
 varAssign:
-	| varName ASSIGN expr { Assignment( $1, $3 ) }
-	| arrayIndex ASSIGN expr { Assignment( $1, $3 ) }
-	/*(*| arrayLength ASSIGN expr { Assignment( $1, $3 ) }*)*/
+	| assignLhs ASSIGN expr { Assignment( $1, $3 ) }
+	| assignLhs ASSIGNADD expr { Assignment( $1, Plus( $1, $3 ) ) }
+	| assignLhs ASSIGNSUB expr { Assignment( $1, Minus( $1, $3 ) ) }
+	| assignLhs ASSIGNMUL expr { Assignment( $1, Times( $1, $3 ) ) }
+	| assignLhs ASSIGNDIV expr { Assignment( $1, Div( $1, $3 ) ) }
 
 varName:
 	VARID { VarIdentifier $1 }
@@ -149,6 +156,7 @@ loopExpr:
 			for ( initialisation; condition; increment ) { dosomething }
 		equates to
 			initialisation; while ( condition ) { dosomething; increment; }
+		tl;dr: it's syntactic sugar for a while loop
 	*)*/
 	| FOR OPENPAREN expr SEMICOLON expr SEMICOLON expr CLOSEPAREN OPENBRACE exprList CLOSEBRACE
 		{ Seq( $3, While( $5, Seq( $10, $7 ) ) ) }

@@ -12,6 +12,11 @@ rule main = parse
 	(* ignore whitespace *)
 	| [ ' ' '\t' '\n' '\r' ] { main lexbuf }
 	| '=' { ASSIGN }
+	| "+=" { ASSIGNADD }
+	| "-=" { ASSIGNSUB }
+	| "*=" { ASSIGNMUL }
+	| "/=" { ASSIGNDIV }
+	
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
 	| '~' { ENDOFPROGRAM }
