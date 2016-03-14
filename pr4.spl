@@ -1,0 +1,14 @@
+//Problem 4 - Accumulator
+//Take 1 input stream, and output a stream such that
+//each value in the output is equal to the sum of all the previous values of the input
+
+int sum = 0;
+
+void Init() {}
+
+void Loop( int list input ) {
+	sum = sum + input[0];
+	output [ sum ];
+}
+
+void Final() {}

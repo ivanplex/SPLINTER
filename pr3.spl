@@ -1,0 +1,11 @@
+//Problem 3 - Addition
+//Take 2 streams, a and b, 
+//produce output stream c s.t. c_i = a_i + 3 * b_i
+
+void Init() {}
+
+void Loop( int list input ) {
+	output [ input[0] + 3 * input[1] ];
+}
+
+void Final() {}

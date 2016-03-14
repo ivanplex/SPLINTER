@@ -65,6 +65,7 @@ type ast =
 	(* type, name, expression *)
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
+	| ArrayIndex of ast * ast (* array name VarIdentifier, index number *)
 	
 	(* left side * right side *)
 	| Plus of ast * ast
@@ -251,6 +252,7 @@ let prettyPrint tree =
 		| Minus( left, right ) -> aux i left ^ " - " ^ aux i right
 		| Times( left, right ) -> aux i left ^ " * " ^ aux i right
 		| Div( left, right ) -> aux i left ^ " / " ^ aux i right
+		| ArrayIndex( arr, idx ) -> aux i arr ^ "[" ^ aux i idx ^ "]"
 		
 	in aux 0 tree
 
@@ -361,6 +363,13 @@ let typeCheck ast =
 						| ( _, _ ) -> raise (InvalidTyping ("Inconsistent typing within array")) )
 				| [] -> Void )
 			in env, Type( List( checkArrayElements elementList ) )
+		| ArrayIndex( arr, idx ) -> let envWithArr, arrType = checkTypes env arr
+			in let envWithIdx, idxType = checkTypes envWithArr idx
+			in ( match arrType, idxType with
+				| Type( List t ), Type( Int ) -> envWithIdx, Type t
+				| Type( _ ), Type( Int ) -> raise ( InvalidTyping "Cannot index a non-list" )
+				| _, Type( _ ) -> raise ( InvalidTyping "Cannot use a non-int to index an array" )
+				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot perform array indexing using a returned value" ) )
 		(* Type check all of the integer operations the same way *)
 		| Plus( leftSide, rightSide ) | Minus( leftSide, rightSide )
 		| Times( leftSide, rightSide ) | Div( leftSide, rightSide )
@@ -424,12 +433,37 @@ let rec eval env ast outputStreamAcc = match ast with
 			| [] -> env, [], outputStreamAcc
 		in let envWithElements, elementList, outputStreamWithElements = evalElements env exprsList outputStreamAcc
 		in envWithElements, Value ( ListVal ( Array.of_list elementList ) ), outputStreamWithElements
+	| ArrayIndex( arr, idx ) -> let envWithArr, arrayVar, outputStreamWithArr = eval env arr outputStreamAcc
+		in let envWithIdx, idxVar, outputStreamWithIdx = eval envWithArr idx outputStreamWithArr
+		in let listArr = match arrayVar with
+			| Value( ListVal arr ) -> arr
+			| _ -> raise ( InvalidTyping "Cannot index a non-array variable" )
+		in let idxInt = match idxVar with
+			| Value( IntVal i ) -> Int32.to_int i
+			| _ -> raise ( InvalidTyping "Cannot index an array with a non-int" )
+		in envWithIdx, Value( listArr.( idxInt) ), outputStreamWithIdx
 	| Assignment( VarIdentifier( name ), expr )
 		-> let envWithExpr, value, outputStreamWithExpr = match eval env expr outputStreamAcc with
 			| exp, Value v, output -> exp, v, output
 			| _, ReturnedVal _, _ -> raise ( InvalidTyping "Cannot return when performing an assignment" )
 		in ( varLookup env name ) := value;
 		envWithExpr, Value value, outputStreamWithExpr
+	| Assignment( ArrayIndex( arr, idx ), exp ) 
+		-> let envWithArr, arrayVar, outputStreamWithArr = eval env arr outputStreamAcc
+		in let envWithIdx, idxVar, outputStreamWithIdx = eval envWithArr idx outputStreamWithArr
+		in let envWithExp, valueVar, outputStreamWithExpr = eval envWithIdx exp outputStreamWithIdx
+		in let listArr = match arrayVar with
+			| Value( ListVal arr ) -> arr
+			| _ -> raise ( InvalidTyping "Cannot index a non-array variable" )
+		in let idxInt = match idxVar with
+			| Value( IntVal i ) -> Int32.to_int i
+			| _ -> raise ( InvalidTyping "Cannot index an array with a non-int" )
+		in let value = match valueVar with
+			| Value x -> x
+			| ReturnedVal _ -> raise ( InvalidTyping "Cannot assign a returned value" )
+		in listArr.( idxInt ) <- value;
+		envWithExp, valueVar, outputStreamWithExpr
+		
 	| Assignment( _, _ ) as node -> raise ( InvalidTreeStructure ( "Assignment with non-VarIdentifier as name ast", node ) )
 	| VarInitialisation( _, VarIdentifier( name ), expr )
 		-> let envWithValue, value, outputStreamWithValue = match eval env expr outputStreamAcc with

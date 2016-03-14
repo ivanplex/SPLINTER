@@ -1,0 +1,10 @@
+//Problem 2 - Doubling
+//Take 1 stream, and produce two streams identical to the input
+
+void Init() {}
+
+void Loop( int list inputStream ) {
+	output [ inputStream[0], inputStream[0] ];
+}
+
+void Final() {}

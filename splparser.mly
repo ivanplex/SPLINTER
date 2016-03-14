@@ -13,7 +13,7 @@
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
 %token PLUS MINUS TIMES DIV
 %token ENDOFPROGRAM
-%token OPENARRAYLIT CLOSEARRAYLIT
+%token OPENSQUAREBRACKET CLOSESQUAREBRACKET
 %token OUTPUT
 
 %token RETURN
@@ -80,15 +80,20 @@ expr:
 	| expr MINUS expr { Minus( $1, $3 ) }
 	| expr TIMES expr { Times( $1, $3 ) }
 	| expr DIV expr { Div( $1, $3 ) }
+	| OPENPAREN expr CLOSEPAREN { $2 }
+	| arrayIndex { $1 }
 
 literal:
 	| INTLIT { IntLit $1 }
 	| BOOLLIT { BoolLit $1 }
-	| OPENARRAYLIT arrayContents CLOSEARRAYLIT { ArrayLit( $2 ) }
+	| OPENSQUAREBRACKET arrayContents CLOSESQUAREBRACKET { ArrayLit( $2 ) }
 
 arrayContents:
 	| expr { [ $1 ] }
 	| expr COMMA arrayContents { $1 :: $3 }
+
+arrayIndex:
+	| expr OPENSQUAREBRACKET expr CLOSESQUAREBRACKET { ArrayIndex( $1, $3 ) }
 
 typeDec:
 	| INTDEC { Int }
@@ -101,6 +106,7 @@ varInit:
 
 varAssign:
 	| varName ASSIGN expr { Assignment( $1, $3 ) }
+	| arrayIndex ASSIGN expr { Assignment( $1, $3 ) }
 
 varName:
 	VARID { VarIdentifier $1 }

@@ -1,9 +1,12 @@
 int foo = 5;
 bool bar = false;
+int list values = [2,5,3,6,9];
+int i = 0;
 
-int Init () {
-	output [ 2 ];
-	return 8 * 2 + 3 * 4;
+void Init () {
+	int list arr = [5];
+	arr[0] = 2;
+	output [ arr[0] ];
 }
 
 //Comment
@@ -17,7 +20,8 @@ int Aux ( int x, bool y ) {
 */
 int Loop ( int list streamValues ) {
 	foo = 6;
-	output streamValues;
+	output [ values[i] ];
+	i = i + 1;
 	return foo;
 }
 

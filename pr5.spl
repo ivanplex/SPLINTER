@@ -1,0 +1,18 @@
+//Problem 5 - Fibonacci
+//take a single input stream,
+//produce an output stream such that each term is equal to
+//the sum of the previous 2 output values, and the current input
+
+int prev1 = 0;
+int prev2 = 0;
+
+void Init() {}
+
+void Loop( int list input ) {
+	int nextOutput = input[0] + prev1 + prev2;
+	output [ nextOutput ];
+	prev2 = prev1;
+	prev1 = nextOutput;
+}
+
+void Final() {}

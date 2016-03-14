@@ -65,6 +65,7 @@ type ast =
 	(* type, name, expression *)
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
+	| ArrayIndex of ast * ast (* array name VarIdentifier, index number *)
 	
 	(* left side * right side *)
 	| Plus of ast * ast

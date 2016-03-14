@@ -18,11 +18,11 @@ mysplinterpreter: $(OBJS) main.cmo
 
 streamparser.ml streamparser.mli: streamparser.mly
 	@rm -f streamparser.ml streamparser.mli
-	ocamlyacc streamparser.mly
+	ocamlyacc -v streamparser.mly
 
 splparser.ml splparser.mli: splparser.mly
 	@rm -f splparser.ml splparser.mli
-	ocamlyacc splparser.mly
+	ocamlyacc -v splparser.mly
 
 # %.ml %.mli: %.mly
 	# @rm -f $@
