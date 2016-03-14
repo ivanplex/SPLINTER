@@ -72,6 +72,9 @@ type ast =
 	| Minus of ast * ast
 	| Times of ast * ast
 	| Div of ast * ast
+	
+	(* Condition, consequent, alternative *)
+	| If of ast * ast * ast
 
 
 type funcBinding = 
@@ -81,7 +84,7 @@ type environment =
 	| Env of binding list * funcBinding list * environment
 	| Null
 
-val prettyPrint: ast -> string
+(* val prettyPrint: ast -> string *)
 
 val string_of_typing: typing -> string
 

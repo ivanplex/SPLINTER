@@ -30,6 +30,9 @@ rule main = parse
 	| "return" { RETURN } 
 	| "output" { OUTPUT }
 	
+	| "if" { IF }
+	| "else" { ELSE }
+	
 	(* | ( ( ( "int" | "bool" | "void" ) " list"* ) as typing ) " list" { TYPE( List( typing ) } *)
 	| "int" { INTDEC }
 	| "bool" { BOOLDEC }

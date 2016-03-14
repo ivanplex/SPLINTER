@@ -1,8 +1,10 @@
 void Init () {
-	int list arr = [5];
-	arr[0] = 2;
-	arr[1] = 7;
-	output arr;
+	bool b = false;
+	int a = 0;
+	if b {
+		a = 1;
+	};
+	output [ a ];
 }
 
 void Loop ( int list streamValues ) {}

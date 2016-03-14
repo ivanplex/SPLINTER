@@ -15,6 +15,7 @@
 %token ENDOFPROGRAM
 %token OPENSQUAREBRACKET CLOSESQUAREBRACKET
 %token OUTPUT
+%token IF ELSE
 
 %token RETURN
 %token <int32>INTLIT
@@ -82,6 +83,7 @@ expr:
 	| expr DIV expr { Div( $1, $3 ) }
 	| OPENPAREN expr CLOSEPAREN { $2 }
 	| arrayIndex { $1 }
+	| ifExpr { $1 }
 
 literal:
 	| INTLIT { IntLit $1 }
@@ -111,4 +113,6 @@ varAssign:
 varName:
 	VARID { VarIdentifier $1 }
 
-
+ifExpr:
+	| IF expr OPENBRACE exprList CLOSEBRACE { If( $2, $4, Null ) }
+	| IF expr OPENBRACE exprList CLOSEBRACE ELSE OPENBRACE exprList CLOSEBRACE { If( $2, $4, $8 ) }

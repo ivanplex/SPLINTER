@@ -72,6 +72,9 @@ type ast =
 	| Minus of ast * ast
 	| Times of ast * ast
 	| Div of ast * ast
+	
+	(* Condition, consequent, alternative *)
+	| If of ast * ast * ast
 
 type funcBinding = 
 	FuncBinding of string * ast (* should be the FuncDef ast node *)
@@ -255,6 +258,9 @@ let prettyPrint tree =
 		| Div( left, right ) -> aux i left ^ " / " ^ aux i right
 		| ArrayIndex( arr, idx ) -> aux i arr ^ "[" ^ aux i idx ^ "]"
 		
+		| If( condition, consequent, alternative )
+			-> "if ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) consequent ^ "\n} else {\n" ^ aux (i+1) alternative ^ "\n};"
+		
 	in aux 0 tree
 
 (*
@@ -269,12 +275,15 @@ let typeCheck ast =
 			(* First check both sides a correctly typed *)
 			-> let ( envA, typeA ) = checkTypes env childA
 			in let ( envB, typeB ) = checkTypes envA childB
-			in ( match typeA with
+			in ( match typeA, typeB with
 				(* If the left side (A) returns a value, the types of B don't matter, else the type of B matters *)
 				(* TODO: if both sides return a value, check they're the same type *)
-				| ReturnType _ -> ( envA, typeA )
+				| ReturnType ta, ReturnType tb when typingsEqual ta tb -> ( envA, typeA )
+				| ReturnType _, ReturnType _ -> raise ( InvalidTyping "Different branches return differing values" )
 				(* If A doesn't return, B would be executed next, so return the type/environment of B *)
-				| _ -> ( envB, typeB ) )
+				| ReturnType ta, Type _ -> ( envA, typeA )
+				| Type _, ReturnType t -> ( envB, ReturnType t )
+				| Type _, Type t -> envB, Type t )
 		| FuncDef( name, declaredRtnType, params, fnBody )
 			(* Once we can call functions, we'll have to actually do something with
 			   the name, for now it's not relevant to type checking though *)
@@ -380,6 +389,18 @@ let typeCheck ast =
 					| Type Int, Type Int -> envWithBothSides, Type Int
 					| Type _, Type _ -> raise ( InvalidTyping "Attempted to add non-integer value" )
 					| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot add a returned value" ) )
+		
+		| If( condition, consequent, alternative ) -> let envWithCond = match checkTypes env condition with
+				| env, Type Bool -> env
+				| _, _ -> raise ( InvalidTyping "The condition of an if statement must return boolean" )
+			in let envWithCons, consType = checkTypes envWithCond consequent
+			in let envWithAlte, alteType = checkTypes envWithCons alternative
+			in ( match consType, alteType with
+				(* return the env with only cond evaluated, to avoid using variables initialised within the conseq/alt *)
+				| ReturnType conT, ReturnType altT when typingsEqual conT altT -> envWithCond, ReturnType( conT ) 
+				| ReturnType _, ReturnType _ -> raise ( InvalidTyping "If statement's consequent and alternative return different types" )
+				| ReturnType t, Type _ | Type _, ReturnType t -> envWithCond, ReturnType t
+				| Type _ as t, Type _ -> envWithCond, t )
 		
 	in let rec findGlobalVars globalEnv = function
 		| Seq( childA, childB ) -> findGlobalVars ( findGlobalVars globalEnv childA ) childB
@@ -511,6 +532,14 @@ let rec eval env ast outputStreamAcc = match ast with
 		in ( match leftValue, rightValue with
 			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating div" ) )
+	
+	| If( condition, consequent, alternative ) -> let envWithCond, condVal, outputStreamWithCond = eval env condition outputStreamAcc
+		in let performCons = match condVal with
+			| Value( BoolVal b ) -> b
+			| _ -> raise ( InvalidTyping "The condition of an if statement must evaluate to a bool" )
+		in if performCons
+			then eval envWithCond consequent outputStreamWithCond
+			else eval envWithCond alternative outputStreamWithCond
  
 
 let flattenParamDecs params = let rec aux acc = function
