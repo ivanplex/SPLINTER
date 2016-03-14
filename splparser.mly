@@ -13,6 +13,7 @@
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
 %token PLUS MINUS TIMES DIV
 %token COMPEQ COMPLT COMPGT COMPLE COMPGE COMPNE
+%token LISTLENGTHOP
 %token ENDOFPROGRAM
 %token OPENSQUAREBRACKET CLOSESQUAREBRACKET
 %token OUTPUT
@@ -25,6 +26,7 @@
 %left COMPEQ COMPGE COMPGT COMPLE COMPLT COMPNE
 %left PLUS MINUS
 %left TIMES DIV
+%nonassoc LISTLENGTHOP
 
 %left COMMA
 %left SEMICOLON
@@ -91,6 +93,7 @@ expr:
 	| expr COMPNE expr { CompareNotEqual( $1, $3 ) }
 	| OPENPAREN expr CLOSEPAREN { $2 }
 	| arrayIndex { $1 }
+	| LISTLENGTHOP expr { ArrayLength $2 }
 	| ifExpr { $1 }
 
 literal:

@@ -27,6 +27,7 @@ rule main = parse
 	| "!=" | "<>" { COMPNE }
 	| '[' { OPENSQUAREBRACKET }
 	| ']' { CLOSESQUAREBRACKET }
+	| '#' { LISTLENGTHOP }
 	
 	(* End the program either on the end of file, or a '~' character.
 	Entering a '~' is easier when writing the program directly into

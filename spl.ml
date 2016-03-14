@@ -66,6 +66,7 @@ type ast =
 	| VarInitialisation of ast * ast * ast
 	| ArrayLit of ast list
 	| ArrayIndex of ast * ast (* array name VarIdentifier, index number *)
+	| ArrayLength of ast
 	
 	(* left side * right side *)
 	| Plus of ast * ast
@@ -268,6 +269,7 @@ let prettyPrint tree =
 		| CompareNotEqual( left, right ) -> "( " ^ aux i left ^ " != " ^ aux i right ^ " )"
 		
 		| ArrayIndex( arr, idx ) -> aux i arr ^ "[" ^ aux i idx ^ "]"
+		| ArrayLength( arr ) -> "#(" ^ aux i arr ^ ")"
 		
 		| If( condition, consequent, alternative )
 			-> "if ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) consequent ^ "\n} else {\n" ^ aux (i+1) alternative ^ "\n};"
@@ -391,6 +393,12 @@ let typeCheck ast =
 				| Type( _ ), Type( Int ) -> raise ( InvalidTyping "Cannot index a non-list" )
 				| _, Type( _ ) -> raise ( InvalidTyping "Cannot use a non-int to index an array" )
 				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot perform array indexing using a returned value" ) )
+		| ArrayLength arr -> let envWithArr, arrType = checkTypes env arr
+			in ( match arrType with
+				| Type( List _ ) -> envWithArr, Type Int
+				| Type _ -> raise ( InvalidTyping "Cannot test the length of a non-list" )
+				| ReturnType _ -> raise ( InvalidTyping "Cannot test the length of a returned value" ) )
+		
 		(* Type check all of the integer operations the same way *)
 		| Plus( leftSide, rightSide ) | Minus( leftSide, rightSide )
 		| Times( leftSide, rightSide ) | Div( leftSide, rightSide )
@@ -503,6 +511,12 @@ let rec eval env ast outputStreamAcc = match ast with
 			| _ -> raise ( InvalidTyping "Cannot index an array with a non-int" )
 		in if listLen >= idxInt then envWithIdx, Value( listArr.( idxInt ) ), outputStreamWithIdx
 		else raise ListIndexOutOfBounds
+	| ArrayLength arr -> let envWithArr, arrayVar, outputStreamWithArr = eval env arr outputStreamAcc
+		in ( match arrayVar with
+			| Value( ListVal( lenRef, _ ) ) -> envWithArr, Value( IntVal( Int32.of_int !lenRef ) ), outputStreamWithArr
+			| _ -> raise ( InvalidTyping "Unexpected value when trying to take the length of a list" ) )
+	
+	
 	| Assignment( VarIdentifier( name ), expr )
 		-> let envWithExpr, value, outputStreamWithExpr = match eval env expr outputStreamAcc with
 			| exp, Value v, output -> exp, v, output
