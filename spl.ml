@@ -73,6 +73,11 @@ type ast =
 	| Times of ast * ast
 	| Div of ast * ast
 	
+	| CompareEqual of ast * ast
+	| CompareLessThan of ast * ast (* Greater than is also held by this node type, by inversing the expression order in the parser *)
+	| CompareLessEqual of ast * ast (* Greater than or Equal to is handled as above *)
+	| CompareNotEqual of ast * ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 
@@ -252,10 +257,16 @@ let prettyPrint tree =
 				| element :: tail -> ( aux i element ) ^ "," ^ ( arrayAux tail )
 				| [] -> "" )
 			in "[" ^ ( arrayAux elementList ) ^ "]"
-		| Plus( left, right ) -> aux i left ^ " + " ^ aux i right
-		| Minus( left, right ) -> aux i left ^ " - " ^ aux i right
-		| Times( left, right ) -> aux i left ^ " * " ^ aux i right
-		| Div( left, right ) -> aux i left ^ " / " ^ aux i right
+		| Plus( left, right ) -> "( " ^ aux i left ^ " + " ^ aux i right ^ " )"
+		| Minus( left, right ) -> "( " ^ aux i left ^ " - " ^ aux i right ^ " )"
+		| Times( left, right ) -> "( " ^ aux i left ^ " * " ^ aux i right ^ " )"
+		| Div( left, right ) -> "( " ^ aux i left ^ " / " ^ aux i right ^ " )"
+		
+		| CompareEqual( left, right ) -> "( " ^ aux i left ^ " == " ^ aux i right ^ " )"
+		| CompareLessThan( left, right ) -> "( " ^ aux i left ^ " < " ^ aux i right ^ " )"
+		| CompareLessEqual( left, right ) -> "( " ^ aux i left ^ " <= " ^ aux i right ^ " )"
+		| CompareNotEqual( left, right ) -> "( " ^ aux i left ^ " != " ^ aux i right ^ " )"
+		
 		| ArrayIndex( arr, idx ) -> aux i arr ^ "[" ^ aux i idx ^ "]"
 		
 		| If( condition, consequent, alternative )
@@ -389,6 +400,22 @@ let typeCheck ast =
 					| Type Int, Type Int -> envWithBothSides, Type Int
 					| Type _, Type _ -> raise ( InvalidTyping "Attempted to add non-integer value" )
 					| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot add a returned value" ) )
+		
+		(* Type equality operators the same way *)
+		| CompareEqual( left, right ) | CompareNotEqual( left, right )
+			-> let envWithLeftSide, leftType = checkTypes env left
+			in let envWithBothSides, rightType = checkTypes envWithLeftSide right
+			in ( match leftType, rightType with
+				| Type Bool, Type Bool | Type Int, Type Int -> envWithBothSides, Type Bool
+				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot compare equality of returned values" )
+				| Type _, Type _ -> raise ( InvalidTyping "Cannot compare non-matching types, or lists" ) )
+		| CompareLessThan( left, right ) | CompareLessEqual( left, right )
+			-> let envWithLeftSide, leftType = checkTypes env left
+			in let envWithBothSides, rightType = checkTypes envWithLeftSide right
+			in ( match leftType, rightType with
+				| Type Int, Type Int -> envWithBothSides, Type Bool
+				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot compare returned values" )
+				| Type _, Type _ -> raise ( InvalidTyping "Can only use <, >, <=, >= to compare ints" ) )
 		
 		| If( condition, consequent, alternative ) -> let envWithCond = match checkTypes env condition with
 				| env, Type Bool -> env
@@ -532,6 +559,29 @@ let rec eval env ast outputStreamAcc = match ast with
 		in ( match leftValue, rightValue with
 			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating div" ) )
+	
+	| CompareEqual( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( IntVal l ), Value( IntVal r ) -> envWithRight, Value( BoolVal( l = r ) ), outputStreamWithRight
+			| Value( BoolVal l ), Value( BoolVal r ) -> envWithRight, Value( BoolVal( l = r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of equality check (==)" ) )
+	| CompareNotEqual( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( IntVal l ), Value( IntVal r ) -> envWithRight, Value( BoolVal( l != r ) ), outputStreamWithRight
+			| Value( BoolVal l ), Value( BoolVal r ) -> envWithRight, Value( BoolVal( l != r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of inverted equality check (!=/<>)" ) )
+	| CompareLessThan( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( IntVal l ), Value( IntVal r ) -> envWithRight, Value( BoolVal( l < r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of inequality check (</>)" ) )
+	| CompareLessEqual( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with 
+			| Value( IntVal l ), Value( IntVal r ) -> envWithRight, Value( BoolVal( l <= r ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Invalid types in left/right side of inequality check (<=/>=)" ) )
 	
 	| If( condition, consequent, alternative ) -> let envWithCond, condVal, outputStreamWithCond = eval env condition outputStreamAcc
 		in let performCons = match condVal with

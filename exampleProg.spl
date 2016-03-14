@@ -1,13 +1,16 @@
+int i = 2;
+
 void Init () {
-	bool b = false;
-	int a = 0;
-	if b {
-		a = 1;
-	};
-	output [ a ];
 }
 
-void Loop ( int list streamValues ) {}
+void Loop ( int list streamValues ) {
+	if ( 0 < i ) {
+		output streamValues;
+	} else { if ( i == 0 ) {
+		output [27];
+	} };
+	i = i - 1;
+}
 
 void Final () {
 	return;

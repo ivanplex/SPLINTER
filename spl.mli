@@ -73,6 +73,11 @@ type ast =
 	| Times of ast * ast
 	| Div of ast * ast
 	
+	| CompareEqual of ast * ast
+	| CompareLessThan of ast * ast (* Greater than is also held by this node type, by inversing the expression order in the parser *)
+	| CompareLessEqual of ast * ast (* Greater than or Equal to is handled as above *)
+	| CompareNotEqual of ast * ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 

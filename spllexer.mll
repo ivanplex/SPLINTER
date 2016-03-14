@@ -19,6 +19,12 @@ rule main = parse
     | '-'      { MINUS }
     | '*'      { TIMES }
     | '/'      { DIV }
+	| "==" { COMPEQ }
+	| '<' { COMPLT }
+	| '>' { COMPGT }
+	| "<=" { COMPLE }
+	| ">=" { COMPGE }
+	| "!=" | "<>" { COMPNE }
 	| '[' { OPENSQUAREBRACKET }
 	| ']' { CLOSESQUAREBRACKET }
 	

@@ -12,6 +12,7 @@
 %token <string>VARID
 %token OPENPAREN CLOSEPAREN OPENBRACE CLOSEBRACE
 %token PLUS MINUS TIMES DIV
+%token COMPEQ COMPLT COMPGT COMPLE COMPGE COMPNE
 %token ENDOFPROGRAM
 %token OPENSQUAREBRACKET CLOSESQUAREBRACKET
 %token OUTPUT
@@ -21,6 +22,7 @@
 %token <int32>INTLIT
 %token <bool>BOOLLIT
 
+%left COMPEQ COMPGE COMPGT COMPLE COMPLT COMPNE
 %left PLUS MINUS
 %left TIMES DIV
 
@@ -81,6 +83,12 @@ expr:
 	| expr MINUS expr { Minus( $1, $3 ) }
 	| expr TIMES expr { Times( $1, $3 ) }
 	| expr DIV expr { Div( $1, $3 ) }
+	| expr COMPEQ expr { CompareEqual( $1, $3 ) }
+	| expr COMPLT expr { CompareLessThan( $1, $3 ) }
+	| expr COMPGT expr { CompareLessThan( $3, $1 ) } /*(* Left/right side swapped to convert greater than to less than *)*/
+	| expr COMPLE expr { CompareLessEqual( $1, $3 ) }
+	| expr COMPGE expr { CompareLessEqual( $3, $1 ) } /*(* As above *)*/
+	| expr COMPNE expr { CompareNotEqual( $1, $3 ) }
 	| OPENPAREN expr CLOSEPAREN { $2 }
 	| arrayIndex { $1 }
 	| ifExpr { $1 }
