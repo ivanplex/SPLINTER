@@ -85,6 +85,7 @@ type ast =
 	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
+	| While of ast * ast
 
 
 type funcBinding = 

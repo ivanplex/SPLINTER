@@ -42,6 +42,8 @@ rule main = parse
 	
 	| "if" { IF }
 	| "else" { ELSE }
+	| "while" { WHILE }
+	| "for" { FOR }
 	
 	(* | ( ( ( "int" | "bool" | "void" ) " list"* ) as typing ) " list" { TYPE( List( typing ) } *)
 	| "int" { INTDEC }

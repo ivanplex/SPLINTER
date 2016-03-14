@@ -1,23 +1,16 @@
-int i = 2;
-int list  a = [1,2,3];
+int idx = 0;
 
-void Init () {
-	int foo = 2;
-	if !false || !true {
-		foo = 3;
-	};
-	output [foo+9000];
-}
+void Init () {};
 
 void Loop ( int list streamValues ) {
-	if ( 0 < i ) {
-		output streamValues;
-	} else { if ( i == 0 ) {
-		output [27];
-	} };
-	i = i - 1;
-}
+	int n = streamValues[0];
+	if ( n < 0 ) {
+		n = 0 - n;
+	};
+	for ( int i = 0; i < n; i = i + 1 ) {
+		output [ i ];
+	};
+	idx = idx + 1;
+};
 
-void Final () {
-	output [ #a + 1 ];
-}
+void Final () {};

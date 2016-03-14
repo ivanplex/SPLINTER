@@ -19,11 +19,13 @@
 %token OPENSQUAREBRACKET CLOSESQUAREBRACKET
 %token OUTPUT
 %token IF ELSE
+%token WHILE FOR
 
 %token RETURN
 %token <int32>INTLIT
 %token <bool>BOOLLIT
 
+%left ASSIGN
 %left BOOLOR
 %left BOOLAND
 %left COMPEQ COMPGE COMPGT COMPLE COMPLT COMPNE
@@ -100,8 +102,9 @@ expr:
 	| expr BOOLOR expr { BooleanOr( $1, $3 ) }
 	| OPENPAREN expr CLOSEPAREN { $2 }
 	| arrayIndex { $1 }
-	| LISTLENGTHOP expr { ArrayLength $2 }
+	| arrayLength { $1 }
 	| ifExpr { $1 }
+	| loopExpr { $1 }
 
 literal:
 	| INTLIT { IntLit $1 }
@@ -115,6 +118,9 @@ arrayContents:
 arrayIndex:
 	| expr OPENSQUAREBRACKET expr CLOSESQUAREBRACKET { ArrayIndex( $1, $3 ) }
 
+arrayLength:
+	| LISTLENGTHOP expr { ArrayLength $2 }
+
 typeDec:
 	| INTDEC { Int }
 	| BOOLDEC { Bool }
@@ -127,6 +133,7 @@ varInit:
 varAssign:
 	| varName ASSIGN expr { Assignment( $1, $3 ) }
 	| arrayIndex ASSIGN expr { Assignment( $1, $3 ) }
+	/*(*| arrayLength ASSIGN expr { Assignment( $1, $3 ) }*)*/
 
 varName:
 	VARID { VarIdentifier $1 }
@@ -134,3 +141,14 @@ varName:
 ifExpr:
 	| IF expr OPENBRACE exprList CLOSEBRACE { If( $2, $4, Null ) }
 	| IF expr OPENBRACE exprList CLOSEBRACE ELSE OPENBRACE exprList CLOSEBRACE { If( $2, $4, $8 ) }
+
+loopExpr:
+	| WHILE expr OPENBRACE exprList CLOSEBRACE { While( $2, $4 ) }
+	/*(*
+		For loop of the form: 
+			for ( initialisation; condition; increment ) { dosomething }
+		equates to
+			initialisation; while ( condition ) { dosomething; increment; }
+	*)*/
+	| FOR OPENPAREN expr SEMICOLON expr SEMICOLON expr CLOSEPAREN OPENBRACE exprList CLOSEBRACE
+		{ Seq( $3, While( $5, Seq( $10, $7 ) ) ) }

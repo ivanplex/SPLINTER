@@ -85,6 +85,7 @@ type ast =
 	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
+	| While of ast * ast
 
 type funcBinding = 
 	FuncBinding of string * ast (* should be the FuncDef ast node *)
@@ -177,6 +178,9 @@ let rec getGlobalEnv = function
 	| Env( _, _, parent ) as env -> ( try getGlobalEnv parent
 		with NullEnvironment -> env )
 	| Null -> raise NullEnvironment
+
+let newEnv parentEnv = Env( [], [], parentEnv )
+let newTypeEnv parentEnv = TypeEnv( [], parentEnv )
 
 (* lookup the type of a variable in the type environment *)
 (* Will throw an UnboundVariable exception if the variable does
@@ -281,6 +285,8 @@ let prettyPrint tree =
 		
 		| If( condition, consequent, alternative )
 			-> "if ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) consequent ^ "\n} else {\n" ^ aux (i+1) alternative ^ "\n};"
+		| While( condition, body )
+			-> "while ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) body ^ "\n};"
 		
 	in aux 0 tree
 
@@ -457,6 +463,11 @@ let typeCheck ast =
 				| ReturnType _, ReturnType _ -> raise ( InvalidTyping "If statement's consequent and alternative return different types" )
 				| ReturnType t, Type _ | Type _, ReturnType t -> envWithCond, ReturnType t
 				| Type _ as t, Type _ -> envWithCond, t )
+		| While( condition, body ) -> let envWithCond = match checkTypes env condition with
+				| env, Type Bool -> env
+				| _, _ -> raise ( InvalidTyping "The condition of an while loop must return boolean" )
+			in ( match checkTypes ( newTypeEnv envWithCond ) body with
+				| _, t -> envWithCond, t )
 		
 	in let rec findGlobalVars globalEnv = function
 		| Seq( childA, childB ) -> findGlobalVars ( findGlobalVars globalEnv childA ) childB
@@ -640,6 +651,16 @@ let rec eval env ast outputStreamAcc = match ast with
 		in if performCons
 			then eval envWithCond consequent outputStreamWithCond
 			else eval envWithCond alternative outputStreamWithCond
+	| While( condition, body ) as whileLoop -> let envWithCond, condVal, outputStreamWithCond = eval env condition outputStreamAcc
+		in let performBody = match condVal with
+			| Value( BoolVal b ) -> b
+			| _ -> raise ( InvalidTyping "The condition of an if statement must evaluate to a bool" )
+		in if performBody then ( 
+			let _, loopVal, outputStreamWithLoop = eval ( newEnv envWithCond ) body outputStreamWithCond
+			in match loopVal with
+				| ReturnedVal _ as t -> envWithCond, t, outputStreamWithLoop
+				| Value _ -> eval envWithCond whileLoop outputStreamWithLoop 
+		) else envWithCond, Value VoidVal, outputStreamWithCond
  
 
 let flattenParamDecs params = let rec aux acc = function
