@@ -83,6 +83,33 @@ exception UnboundVariable of string
 exception InvalidTreeStructure of string * ast
 exception NullEnvironment
 exception IncorrectNumberOfParameters
+exception InvalidStream of string
+
+let checkStreamLengths stream =
+	let rec aux = function
+		| head :: tail -> let nextLen = aux tail
+			and len = List.length head
+			in if len == nextLen || nextLen == -1
+				then len
+				else raise ( InvalidStream "streams must be of equal length" )
+		| [] -> -1
+	in ignore( aux stream )
+
+let string_list_join l delimiter =
+	let conc prev next = prev ^ delimiter ^ next
+	in let result = List.fold_left conc "" l
+	(* now trim the leading delimiter *)
+	in let len = String.length result
+	and dellen = String.length delimiter
+	in String.sub result dellen (len - dellen)
+
+let string_of_stream = function
+	| [] -> ""
+	| int32ll ->
+		let int32l_to_string l =
+			string_list_join (List.map Int32.to_string l) " "
+		in ( string_list_join (List.map int32l_to_string int32ll) "\n" ) ^ "\n"
+
 
 let rec string_of_var = function
 	| IntVal num -> Int32.to_string num
@@ -356,66 +383,67 @@ let typeCheck ast =
 	in let globalEnv = findGlobalVars ( TypeEnv( [], Null ) ) ast
 	in ignore( checkTypes globalEnv ast ); ()
 	
-let rec eval env = function
-	| Seq( leftSide, rightSide ) -> ( match eval env leftSide with
-			| envWithLeftSide, ( ReturnedVal _ as t ) -> envWithLeftSide, t
-			| envWithLeftSide, Value _ -> eval envWithLeftSide rightSide )
+let rec eval env ast outputStreamAcc = match ast with
+	| Seq( leftSide, rightSide ) -> ( match eval env leftSide outputStreamAcc with
+			| envWithLeftSide, ( ReturnedVal _ as t ), outputStream -> envWithLeftSide, t, outputStream
+			| envWithLeftSide, Value _, outputStream -> eval envWithLeftSide rightSide outputStream )
 	| FuncDef( funcId, declaredType, params, body ) as def
-		-> addFuncToEnv env def, Value VoidVal
-	| VarIdentifier name -> env, Value !( varLookup env name )
-	| ReturnStmt exp -> let envWithValue, value = eval env exp
+		-> addFuncToEnv env def, Value VoidVal, outputStreamAcc
+	| VarIdentifier name -> env, Value !( varLookup env name ), outputStreamAcc
+	| ReturnStmt exp -> let envWithValue, value, outputStream = eval env exp outputStreamAcc
 		in let rtnVal = match value with
 			| Value variable -> ReturnedVal variable
 			| ReturnedVal _ -> raise ( InvalidTyping "Cannot return an already returned value" )
-		in envWithValue, rtnVal
-	| IntLit value -> env, Value ( IntVal value )
-	| BoolLit value -> env, Value ( BoolVal value )
-	| ArrayLit exprsList -> let rec evalElements env = function
-			| expr :: tail -> let envWithElement, value = match eval env expr with
-					| env, Value v -> env, v
-					| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return inside a list" )
-				in let envWithTail, valueTail = evalElements envWithElement tail
-				in envWithTail, ( value :: valueTail )
-			| [] -> env, []
-		in let ( envWithElements, elementList ) = evalElements env exprsList
-		in envWithElements, Value ( ListVal ( Array.of_list elementList ) )
+		in envWithValue, rtnVal, outputStream
+	| IntLit value -> env, Value ( IntVal value ), outputStreamAcc
+	| BoolLit value -> env, Value ( BoolVal value ), outputStreamAcc
+	| ArrayLit exprsList -> let rec evalElements env tail outputStreamAcc = match tail with
+			| expr :: tail -> let envWithElement, value, outputStreamWithElement = match eval env expr outputStreamAcc with
+					| env, Value v, outputStream -> env, v, outputStream
+					| _, ReturnedVal _, _ -> raise ( InvalidTyping "Cannot return inside a list" )
+				in let envWithTail, valueTail, outputStreamWithTail = evalElements envWithElement tail outputStreamAcc
+				in envWithTail, ( value :: valueTail ), outputStreamWithTail
+			| [] -> env, [], outputStreamAcc
+		in let envWithElements, elementList, outputStreamWithElements = evalElements env exprsList outputStreamAcc
+		in envWithElements, Value ( ListVal ( Array.of_list elementList ) ), outputStreamWithElements
 	| Assignment( VarIdentifier( name ), expr )
-		-> let envWithExpr, value = match eval env expr with
-			| exp, Value v -> exp, v
-			| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return when performing an assignment" )
+		-> let envWithExpr, value, outputStreamWithExpr = match eval env expr outputStreamAcc with
+			| exp, Value v, output -> exp, v, output
+			| _, ReturnedVal _, _ -> raise ( InvalidTyping "Cannot return when performing an assignment" )
 		in ( varLookup env name ) := value;
-		envWithExpr, Value value
+		envWithExpr, Value value, outputStreamWithExpr
 	| Assignment( _, _ ) as node -> raise ( InvalidTreeStructure ( "Assignment with non-VarIdentifier as name ast", node ) )
 	| VarInitialisation( _, VarIdentifier( name ), expr )
-		-> let envWithValue, value = match eval env expr with
-			| env, Value v -> env, v
-			| _, ReturnedVal _ -> raise ( InvalidTyping "Cannot return when initialising a variable" )
-		in addVarToEnv envWithValue name value, Value( value )
+		-> let envWithValue, value, outputStreamWithValue = match eval env expr outputStreamAcc with
+			| env, Value v, output -> env, v, output
+			| _, ReturnedVal _, _ -> raise ( InvalidTyping "Cannot return when initialising a variable" )
+		in addVarToEnv envWithValue name value, Value( value ), outputStreamWithValue
 	| VarInitialisation( _, _, _ ) as node -> raise ( InvalidTreeStructure ( "VarInitialisation with non-VarIdentifier as name ast", node ) )
 	
 	| FuncParams( _, _ ) | ParamDec( _, _ ) 
 	| TypeDec _ | Null | FuncIdentifier _
-		-> env, Value VoidVal
+		-> env, Value VoidVal, outputStreamAcc
 	
-	| Plus( left, right ) -> let envWithLeft, leftValue = eval env left
-		in let envWithRight, rightValue = eval envWithLeft right
+	(* TODO: (maybe) generalise some of the below cases. They're almost entirely the same *)
+	| Plus( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
 		in ( match leftValue, rightValue with
-			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.add leftInt rightInt ) )
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.add leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating plus" ) )
-	| Minus( left, right ) -> let envWithLeft, leftValue = eval env left
-		in let envWithRight, rightValue = eval envWithLeft right
+	| Minus( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
 		in ( match leftValue, rightValue with
-			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.sub leftInt rightInt ) )
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.sub leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating minus" ) )
-	| Times( left, right ) -> let envWithLeft, leftValue = eval env left
-		in let envWithRight, rightValue = eval envWithLeft right
+	| Times( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
 		in ( match leftValue, rightValue with
-			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.mul leftInt rightInt ) )
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.mul leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating times" ) )
-	| Div( left, right ) -> let envWithLeft, leftValue = eval env left
-		in let envWithRight, rightValue = eval envWithLeft right
+	| Div( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
 		in ( match leftValue, rightValue with
-			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) )
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating div" ) )
  
 
@@ -429,10 +457,10 @@ let flattenParamDecs params = let rec aux acc = function
 	in aux [] params
 
 let populateEnvironmentInitialState env ast =
-	let populatedEnv, _ = eval env ast
+	let populatedEnv, _, _ = eval env ast []
 	in populatedEnv
 
-let executeFunction env funcName paramList =
+let executeFunction env funcName paramList outputStreamAcc =
 	let paramDeclarations, functionBody = match funcLookup env funcName with
 		| FuncDef( _, _, paramDeclarations, functionBody ) -> paramDeclarations, functionBody
 		| node -> raise ( InvalidTreeStructure ( "Received non-FuncDef ast from funcLookup", node ) )
@@ -444,6 +472,6 @@ let executeFunction env funcName paramList =
 			| ( [], [] ) -> env
 			| ( _ :: _, [] ) | ( [], _ :: _ ) -> raise IncorrectNumberOfParameters
 	in let localEnv = addParameterBindings (Env( [], [], getGlobalEnv env )) ( flattenParamDecs paramDeclarations ) paramList
-	in match eval localEnv functionBody with
-		| _, Value v -> VoidVal
-		| _, ReturnedVal v -> v
+	in match eval localEnv functionBody outputStreamAcc with
+		| _, Value v, outputStream -> VoidVal, outputStream
+		| _, ReturnedVal v, outputStream -> v, outputStream

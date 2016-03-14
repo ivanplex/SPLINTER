@@ -83,8 +83,12 @@ val string_of_typing: typing -> string
 
 val typeCheck: ast -> unit
 
-val executeFunction: environment -> string -> variable list -> variable
+val executeFunction: environment -> string -> variable list -> int32 list list -> variable * int32 list list
 
 val string_of_var: variable -> string
 
 val populateEnvironmentInitialState: environment -> ast -> environment
+
+val checkStreamLengths: int32 list list -> unit
+
+val string_of_stream: int32 list list -> string
