@@ -22,7 +22,7 @@ rule main = parse
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
 	| '~' { ENDOFPROGRAM }
-	(* | '+'      { PLUS } *)
+	| '+'      { PLUS }
     | '-'      { MINUS }
     | '*'      { TIMES }
     | '/'      { DIV }
