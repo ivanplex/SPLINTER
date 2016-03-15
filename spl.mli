@@ -15,11 +15,15 @@ type checkingType =
 type typeBinding =
 	| TypeBind of string * typing
 
+type funcTypeBinding =
+	(* function name, parameter typings, return type *)
+	| FuncTypeBind of string * typing list * typing
+
 (* List of type bindings, with a reference to a parent
  environment (the global environment).*)
 type typeEnvironment =
 	(* list of bindings in the env, reference to higher level env *)
-	| TypeEnv of typeBinding list * typeEnvironment
+	| TypeEnv of typeBinding list * funcTypeBinding list * typeEnvironment
 	| Null
 
 type variable =
@@ -52,6 +56,9 @@ type ast =
 	| ParamDec of ast * ast (* param type, param identifier *)
 	| VarIdentifier of string
 	| FuncIdentifier of string
+	
+	(* functionName, parameter list *)
+	| FunctionCall of ast * ast list
 	
 	| ReturnStmt of ast
 	| OutputStmt of ast

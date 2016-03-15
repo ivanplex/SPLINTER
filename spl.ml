@@ -15,11 +15,15 @@ type checkingType =
 type typeBinding =
 	| TypeBind of string * typing
 
+type funcTypeBinding =
+	(* function name, parameter typings, return type *)
+	| FuncTypeBind of string * typing list * typing
+
 (* List of type bindings, with a reference to a parent
  environment (the global environment).*)
 type typeEnvironment =
 	(* list of bindings in the env, reference to higher level env *)
-	| TypeEnv of typeBinding list * typeEnvironment
+	| TypeEnv of typeBinding list * funcTypeBinding list * typeEnvironment
 	| Null
 
 type variable =
@@ -53,6 +57,9 @@ type ast =
 	| ParamDec of ast * ast (* param type, param identifier *)
 	| VarIdentifier of string
 	| FuncIdentifier of string
+	
+	(* functionName, parameter list *)
+	| FunctionCall of ast * ast list
 	
 	| ReturnStmt of ast
 	| OutputStmt of ast
@@ -180,7 +187,7 @@ let rec getGlobalEnv = function
 	| Null -> raise NullEnvironment
 
 let newEnv parentEnv = Env( [], [], parentEnv )
-let newTypeEnv parentEnv = TypeEnv( [], parentEnv )
+let newTypeEnv parentEnv = TypeEnv( [], [], parentEnv )
 
 (* lookup the type of a variable in the type environment *)
 (* Will throw an UnboundVariable exception if the variable does
@@ -192,19 +199,39 @@ let typeLookup env name =
 		| [] -> raise ( UnboundVariable name )
 	in let rec aux env name =
 		match env with
-			| TypeEnv( bindingList, parentEnv ) -> ( try
+			| TypeEnv( bindingList, _, parentEnv ) -> ( try
 					envAssoc bindingList name
 				with UnboundVariable _ -> aux parentEnv name )
 			| Null -> raise ( UnboundVariable name )
 	in aux env name
 
+let funcTypeLookup env name =
+	let rec envAssoc l name = match l with
+		| FuncTypeBind( funcName, funcParams, funcRtn ) :: tail
+			-> if String.compare funcName name == 0 then funcParams, funcRtn else envAssoc tail name
+		| [] -> raise ( UnboundVariable name )
+	in let rec aux env name =
+		match env with
+			| TypeEnv( _, bindingList, parentEnv ) -> ( try
+					envAssoc bindingList name
+				with UnboundVariable _ -> aux parentEnv name )
+			| Null -> raise ( UnboundVariable name )
+	in aux env name
+
+
 (* Returns a new type environment with the given binding
 added to it *)
 let addBindingToTypeEnv binding env =
-	let ( bindingList, parentEnv ) = match env with
-		| TypeEnv( bindingList, parentEnv ) -> ( bindingList, parentEnv )
+	let ( bindingList, funcBindingList, parentEnv ) = match env with
+		| TypeEnv( bindingList, funcBindingList, parentEnv ) -> bindingList, funcBindingList, parentEnv
 		| Null -> raise ( UnboundVariable "Given null type environment" )
-	in TypeEnv( binding :: bindingList, parentEnv )
+	in TypeEnv( binding :: bindingList, funcBindingList, parentEnv )
+
+let addFuncBindingToTypeEnv binding env =
+	let ( bindingList, funcBindingList, parentEnv ) = match env with
+		| TypeEnv( bindingList, funcBindingList, parentEnv ) -> bindingList, funcBindingList, parentEnv
+		| Null -> raise ( UnboundVariable "Given null type environment" )
+	in TypeEnv( bindingList, binding :: funcBindingList, parentEnv )
 
 (* Retrieves the typing from a checkingType *)
 (* should only be used when a returned value is specifically not wanted *)
@@ -287,6 +314,13 @@ let prettyPrint tree =
 			-> "if ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) consequent ^ "\n} else {\n" ^ aux (i+1) alternative ^ "\n};"
 		| While( condition, body )
 			-> "while ( " ^ aux i condition ^ " ) {\n" ^ aux (i+1) body ^ "\n};"
+		| FunctionCall( name, params ) -> let rec paramAux = function
+				| [ param ] -> aux i param
+				| param :: tail -> aux i param ^ ", " ^ paramAux tail
+				| [] -> ""
+			in aux i name ^ "( " ^ paramAux params ^ " )"
+			
+		
 		
 	in aux 0 tree
 
@@ -297,7 +331,12 @@ let prettyPrint tree =
 *)
 
 let typeCheck ast =
-	let rec checkTypes env = function
+	let rec getParamTypeList acc = function
+		| ParamDec( TypeDec t, _ ) -> t :: acc
+		| FuncParams( left, right ) -> getParamTypeList ( getParamTypeList acc left ) right
+		| Null -> acc
+		| node -> raise ( InvalidTreeStructure ( "invalid node types when checking function parameter typings", node ) ) 
+	in let rec checkTypes env = function
 		| Seq( childA, childB )
 			(* First check both sides a correctly typed *)
 			-> let ( envA, typeA ) = checkTypes env childA
@@ -316,7 +355,7 @@ let typeCheck ast =
 			   the name, for now it's not relevant to type checking though *)
 			
 			(* Add the parameters to a new local environment *)
-			-> let ( envWithParams, _ ) = checkTypes ( TypeEnv( [], env ) ) params
+			-> let ( envWithParams, _ ) = checkTypes ( TypeEnv( [], [], env ) ) params
 			(* Typecheck the body of the function *)
 			in let ( _, observedType ) = checkTypes envWithParams fnBody
 			in ( match ( declaredRtnType, observedType ) with
@@ -376,10 +415,11 @@ let typeCheck ast =
 		| Assignment( varName, exp )
 			-> let ( postNameEnv, varType ) = checkTypes env varName
 			in let ( postTypeEnv, expType ) = checkTypes postNameEnv exp
-			in if typingsEqual ( getType varType ) ( getType expType )
-				then postTypeEnv, varType
-				else raise ( InvalidTyping ( "Attempted to assign " ^ string_of_checktype expType ^ " value to " ^ string_of_checktype varType ^ " variable: " ^ prettyPrint varName ) )
-		 
+			in ( match getType varType, getType expType with
+				| varT, expT when typingsEqual varT expT -> postTypeEnv, Type varT
+				(* The following case occurs when an list is initialised as empty *)
+				| List _ as varT, List Void -> postTypeEnv, Type varT
+				| _ -> raise ( InvalidTyping ( "Attempted to assign " ^ string_of_checktype expType ^ " value to " ^ string_of_checktype varType ^ " variable: " ^ prettyPrint varName ) ) )
 		(* Bind a new variable to its type in the current environment *)
 		(* Check that its initial value matches the type it has been declared as *)
 		| VarInitialisation( declaredTypeAst, nameAst, expr )
@@ -469,6 +509,25 @@ let typeCheck ast =
 			in ( match checkTypes ( newTypeEnv envWithCond ) body with
 				| _, t -> envWithCond, t )
 		
+		| FunctionCall( FuncIdentifier( fnName ), params ) -> let rec getParamTypes env = function
+				| expr :: tail -> let envWithParam, paramType = checkTypes env expr 
+					in let envWithTail, tailTypes = getParamTypes envWithParam tail
+					in envWithTail, ( getType paramType ) :: tailTypes
+				| [] -> env, []
+			and checkParameterTypes givenParamTypes fnParamTypes =
+				match givenParamTypes, fnParamTypes with
+					| typeA :: tailA, typeB :: tailB when typingsEqual typeA typeB
+						-> checkParameterTypes tailA tailB
+					| typeA :: _, typeB :: _ -> raise ( InvalidTyping ( "Invalid parameters given to function " ^ fnName ) )
+					| [], _ :: _ | _ :: _, [] -> raise ( InvalidTyping ( "Incorrect number of parameters given to function " ^ fnName ) )
+					| [], [] -> ()
+			in let fnParamTypes, fnRtnType = funcTypeLookup env fnName
+			in let envWithParams, paramTypes = getParamTypes env params
+			in checkParameterTypes fnParamTypes paramTypes;
+			envWithParams, Type fnRtnType
+		| FunctionCall( _, _ ) as node -> raise ( InvalidTreeStructure ( "Non-FuncIdentifier as function name", node ) )
+			
+		
 	in let rec findGlobalVars globalEnv = function
 		| Seq( childA, childB ) -> findGlobalVars ( findGlobalVars globalEnv childA ) childB
 		
@@ -479,15 +538,21 @@ let typeCheck ast =
 			in let ( _, varType ) = checkTypes globalEnv typeAst
 			in addBindingToTypeEnv ( TypeBind( varName, getType varType ) ) globalEnv
 		
-		| FuncDef( _, _, _, _ ) | Null -> globalEnv
+		| FuncDef( FuncIdentifier name, TypeDec rtnType, paramsList, _ )
+			-> let paramTypings = getParamTypeList [] paramsList
+			in addFuncBindingToTypeEnv ( FuncTypeBind( name, paramTypings, rtnType ) ) globalEnv
+		
+		| FuncDef( _, _, _, _ ) as node -> raise ( InvalidTreeStructure ( "unexpected values inside funcdef when checking for global variables", node ) )
+		
+		| Null -> globalEnv
 		
 		| node
 			-> raise ( InvalidTreeStructure ( "Unexpected ast node when finding global variables for type checking", node ) )
 			(* This function shouldn't be looking 
 			inside function definitions, and so
 			shouldn't encounter these node types *)
-	in let globalEnv = findGlobalVars ( TypeEnv( [], Null ) ) ast
-	in ignore( checkTypes globalEnv ast ); ()
+	in let globalEnv = findGlobalVars ( TypeEnv( [], [], Null ) ) ast
+	in ignore( checkTypes globalEnv ast )
 
 let extendArray len arrRef reqLen = 
 	if Array.length !arrRef >= reqLen
@@ -497,9 +562,20 @@ let extendArray len arrRef reqLen =
 	else ( let newArr = Array.make reqLen VoidVal
 	in for i = 0 to !len - 1 do
 		newArr.(i) <- !arrRef.(i)
-	done; 
+	done;
 	arrRef := newArr;
 	len := reqLen )
+
+let flattenParamDecs params = let rec aux acc = function
+		| ParamDec( _, _ ) as param -> param :: acc
+		| FuncParams( leftBranch, rightBranch )
+			-> let accWithLeft = aux acc leftBranch
+			in aux accWithLeft rightBranch
+		| Null -> acc
+		| node -> raise ( InvalidTreeStructure ( "Unexpected ast node when flattening param declarations", node ) )
+	in aux [] params
+
+
 
 let rec eval env ast outputStreamAcc = match ast with
 	| Seq( leftSide, rightSide ) -> ( match eval env leftSide outputStreamAcc with
@@ -661,22 +737,24 @@ let rec eval env ast outputStreamAcc = match ast with
 				| ReturnedVal _ as t -> envWithCond, t, outputStreamWithLoop
 				| Value _ -> eval envWithCond whileLoop outputStreamWithLoop 
 		) else envWithCond, Value VoidVal, outputStreamWithCond
- 
+	| FunctionCall( FuncIdentifier fnName, paramExps ) -> let rec evaluateParams env outputStreamAcc = function
+			| exp :: tail -> let envWithParam, value, outputStreamWithParam = match eval env exp outputStreamAcc with
+					| env, Value value, output -> env, value, output
+					| _, ReturnedVal _, _ -> raise ( InvalidTyping "Cannot pass a returned value as a parameter" )
+				in let envWithTail, outputStreamWithTail, values = evaluateParams envWithParam outputStreamWithParam tail
+				in envWithTail, outputStreamWithTail, ( value :: values )
+			| [] -> env, outputStreamAcc, []
+		in let envWithParams, outputStreamWithParams, paramVars = evaluateParams env outputStreamAcc paramExps
+		in let result, outputStreamWithCall = executeFunction envWithParams fnName paramVars outputStreamWithParams
+		in envWithParams, Value result, outputStreamWithCall
+		
+	| FunctionCall( _, _ ) as node -> raise ( InvalidTreeStructure ( "Invalid structure on function call", node ) )
 
-let flattenParamDecs params = let rec aux acc = function
-		| ParamDec( _, _ ) as param -> param :: acc
-		| FuncParams( leftBranch, rightBranch )
-			-> let accWithLeft = aux acc leftBranch
-			in aux accWithLeft rightBranch
-		| Null -> acc
-		| node -> raise ( InvalidTreeStructure ( "Unexpected ast node when flattening param declarations", node ) )
-	in aux [] params
-
-let populateEnvironmentInitialState env ast =
+and populateEnvironmentInitialState env ast =
 	let populatedEnv, _, _ = eval env ast []
 	in populatedEnv
 
-let executeFunction env funcName paramList outputStreamAcc =
+and executeFunction env funcName paramList outputStreamAcc =
 	let paramDeclarations, functionBody = match funcLookup env funcName with
 		| FuncDef( _, _, paramDeclarations, functionBody ) -> paramDeclarations, functionBody
 		| node -> raise ( InvalidTreeStructure ( "Received non-FuncDef ast from funcLookup", node ) )
@@ -691,3 +769,5 @@ let executeFunction env funcName paramList outputStreamAcc =
 	in match eval localEnv functionBody outputStreamAcc with
 		| _, Value v, outputStream -> VoidVal, outputStream
 		| _, ReturnedVal v, outputStream -> v, outputStream
+ 
+

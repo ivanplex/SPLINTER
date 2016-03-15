@@ -106,11 +106,21 @@ expr:
 	| arrayLength { $1 }
 	| ifExpr { $1 }
 	| loopExpr { $1 }
+	| functionCall { $1 }
+
+functionCall:
+	| FUNCID OPENPAREN functionCallParams CLOSEPAREN { FunctionCall( FuncIdentifier $1, $3 ) }
+	| FUNCID OPENPAREN CLOSEPAREN { FunctionCall( FuncIdentifier $1, [] ) }
+
+functionCallParams:
+	| expr { [ $1 ] }
+	| expr COMMA functionCallParams { $1 :: $3 }
 
 literal:
 	| INTLIT { IntLit $1 }
 	| BOOLLIT { BoolLit $1 }
 	| OPENSQUAREBRACKET arrayContents CLOSESQUAREBRACKET { ArrayLit( $2 ) }
+	| OPENSQUAREBRACKET CLOSESQUAREBRACKET { ArrayLit( [] ) }
 
 arrayContents:
 	| expr { [ $1 ] }
@@ -153,9 +163,9 @@ loopExpr:
 	| WHILE expr OPENBRACE exprList CLOSEBRACE { While( $2, $4 ) }
 	/*(*
 		For loop of the form: 
-			for ( initialisation; condition; increment ) { dosomething }
+			for ( initialisation; condition; increment ) { dosomething };
 		equates to
-			initialisation; while ( condition ) { dosomething; increment; }
+			initialisation; while ( condition ) { dosomething; increment; };
 		tl;dr: it's syntactic sugar for a while loop
 	*)*/
 	| FOR OPENPAREN expr SEMICOLON expr SEMICOLON expr CLOSEPAREN OPENBRACE exprList CLOSEBRACE
