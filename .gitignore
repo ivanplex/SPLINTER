@@ -12,5 +12,3 @@ streamparser.mli
 splparser.mli
 streamparser.ml
 streamlexer.ml
-mysplinterpreter
-mysplinterpreter
