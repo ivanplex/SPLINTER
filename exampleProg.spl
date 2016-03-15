@@ -1,51 +1,13 @@
-int idx = 0;
-
-void Init () {
-	int a = 0;
-	int b = a;
-	a = 5;
-	a += 1;
-	// ++a;
-	// output [ b ];
-	output [ a ];
-	return;
+int Mod( int num, int div ) {
+	return num - ( num / div * div );
 };
 
-void Aux() {
-	output [ 12 ];
+void Out( int a, int b, bool c ) {
+	output [ a, b ];
 };
 
-int Inc() {
-	return idx += 1;
+void Init() {
+	Out( 1, 7, true );
 };
-
-int Sum( int a, int b ) {
-	return a;
-};
-
-void Modify( int list arr ) {
-	arr[0] = 5;
-};
-
-int list CopyList( int list arr ) {
-	int list newList = [0];
-	for ( int i = 0; i < #arr; i += 1 ) {
-		// output [ i, arr[i] ];
-		newList[i] = arr[i];
-	};
-	return newList;
-};
-
-void Loop ( int list streamValues ) {
-	int list a = [ 2, 5 ];
-	int list b = CopyList( a );
-	
-	a[1] = 17;
-	
-	//output b; 
-	// int n = streamValues[0];
-	// n += 1;
-	// output [ n ];
-};
-
-void Final () {};
+void Loop( int list input ) {};
+void Final() {};

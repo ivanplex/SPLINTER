@@ -117,7 +117,8 @@ functionCall:
 
 functionCallParams:
 	| expr { [ $1 ] }
-	| expr COMMA functionCallParams { $1 :: $3 }
+	/*(* | expr COMMA functionCallParams { $1 :: $3 } *)*/
+	| functionCallParams COMMA expr { $3 :: $1 }
 
 literal:
 	| INTLIT { IntLit $1 }
