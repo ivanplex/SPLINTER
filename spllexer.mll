@@ -16,11 +16,13 @@ rule main = parse
 	| "-=" { ASSIGNSUB }
 	| "*=" { ASSIGNMUL }
 	| "/=" { ASSIGNDIV }
+	(*| "++" { INCREMENT }
+	| "--" { DECREMENT } *)
 	
 	| ';' { SEMICOLON }
 	| ',' { COMMA }
 	| '~' { ENDOFPROGRAM }
-	| '+'      { PLUS }
+	(* | '+'      { PLUS } *)
     | '-'      { MINUS }
     | '*'      { TIMES }
     | '/'      { DIV }

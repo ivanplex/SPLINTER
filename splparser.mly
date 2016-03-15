@@ -7,6 +7,7 @@
 %token SEMICOLON COMMA
 %token ASSIGN
 %token ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV
+/*(*%token INCREMENT DECREMENT*)*/
 /*(* %token <typing>TYPE *)*/
 %token INTDEC BOOLDEC VOIDDEC LISTDEC
 %token <string>FUNCID
@@ -34,6 +35,7 @@
 %left TIMES DIV
 %nonassoc LISTLENGTHOP
 %nonassoc BOOLNOT
+/*(*%left INCREMENT*)*/
 
 %left COMMA
 %left SEMICOLON
@@ -107,6 +109,7 @@ expr:
 	| ifExpr { $1 }
 	| loopExpr { $1 }
 	| functionCall { $1 }
+	/*(*| INCREMENT assignLhs { Assignment( $2, Plus( $2, IntLit 1l ) ) }*)*/
 
 functionCall:
 	| FUNCID OPENPAREN functionCallParams CLOSEPAREN { FunctionCall( FuncIdentifier $1, $3 ) }

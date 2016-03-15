@@ -4,7 +4,10 @@ void Init () {
 	int a = 0;
 	int b = a;
 	a = 5;
+	a += 1;
+	// ++a;
 	// output [ b ];
+	output [ a ];
 	return;
 };
 
@@ -17,7 +20,7 @@ int Inc() {
 };
 
 int Sum( int a, int b ) {
-	return a + b;
+	return a;
 };
 
 void Modify( int list arr ) {
@@ -39,7 +42,7 @@ void Loop ( int list streamValues ) {
 	
 	a[1] = 17;
 	
-	output b; 
+	//output b; 
 	// int n = streamValues[0];
 	// n += 1;
 	// output [ n ];

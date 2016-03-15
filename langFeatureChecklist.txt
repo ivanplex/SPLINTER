@@ -1,0 +1,10 @@
+increment/decrement operators ( ++i, --i )
+	Disallow duplicate variable/function initialisations (do not check parent Envs for this)
+Allow assignment to the length of a array/list
+
+	bitwise operations (?)
+	modulo
+
+	Comment the code better!
+
+maybe? built-in functions
