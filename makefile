@@ -33,7 +33,7 @@ splparser.ml splparser.mli: splparser.mly
 	ocamllex $<
 
 clean::
-	rm -f streamlexer.ml spllexer.ml streamparser.ml streamparser.mli splparser.ml splparser.mli *.cmo *.cmi \
+	rm -f streamlexer.ml spllexer.ml streamparser.ml streamparser.mli splparser.ml splparser.mli *.cmo *.cmi streamparser.output splparser.output \
 	   c TAGS *~ 
 
 depend:: $(DEPEND) 
