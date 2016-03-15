@@ -109,6 +109,7 @@ exception NullEnvironment
 exception IncorrectNumberOfParameters
 exception InvalidStream of string
 exception ListIndexOutOfBounds
+exception MissingFunction of string
 
 let checkStreamLengths stream =
 	let rec aux = function
@@ -551,8 +552,34 @@ let typeCheck ast =
 			(* This function shouldn't be looking 
 			inside function definitions, and so
 			shouldn't encounter these node types *)
+	in let checkForFunc env name desiredRtnType desiredParamTypes = 
+		let rec paramTypesEqual typesA typesB = match typesA, typesB with
+			| typeA :: tailA, typeB :: tailB when typingsEqual typeA typeB 
+				-> paramTypesEqual tailA tailB
+			| _ :: _, _ :: _ -> raise ( InvalidTyping ( "Parameters do not match on function " ^ name ) ) 
+			| [], [] -> ();
+			| [], _ :: _ | _ :: _, [] -> raise ( InvalidTyping ( "Wrong number of parameters on function " ^ name ) )
+		in let foundParamTypes, foundRtnType = funcTypeLookup env name
+		in paramTypesEqual foundParamTypes desiredParamTypes;
+		if typingsEqual foundRtnType desiredRtnType then () else
+			raise ( InvalidTyping ( "Function " ^ name ^ " has wrong return type" ) )
+	
 	in let globalEnv = findGlobalVars ( TypeEnv( [], [], Null ) ) ast
-	in ignore( checkTypes globalEnv ast )
+	in ignore( checkTypes globalEnv ast );
+	checkForFunc globalEnv "Init" Void [];
+	checkForFunc globalEnv "Loop" Void [List Int];
+	checkForFunc globalEnv "Final" Void []
+
+
+
+let flattenParamDecs params = let rec aux acc = function
+		| ParamDec( _, _ ) as param -> param :: acc
+		| FuncParams( leftBranch, rightBranch )
+			-> let accWithLeft = aux acc leftBranch
+			in aux accWithLeft rightBranch
+		| Null -> acc
+		| node -> raise ( InvalidTreeStructure ( "Unexpected ast node when flattening param declarations", node ) )
+	in aux [] params
 
 let extendArray len arrRef reqLen = 
 	if Array.length !arrRef >= reqLen
@@ -565,16 +592,6 @@ let extendArray len arrRef reqLen =
 	done;
 	arrRef := newArr;
 	len := reqLen )
-
-let flattenParamDecs params = let rec aux acc = function
-		| ParamDec( _, _ ) as param -> param :: acc
-		| FuncParams( leftBranch, rightBranch )
-			-> let accWithLeft = aux acc leftBranch
-			in aux accWithLeft rightBranch
-		| Null -> acc
-		| node -> raise ( InvalidTreeStructure ( "Unexpected ast node when flattening param declarations", node ) )
-	in aux [] params
-
 
 
 let rec eval env ast outputStreamAcc = match ast with

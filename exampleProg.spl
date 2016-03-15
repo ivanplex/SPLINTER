@@ -5,6 +5,7 @@ void Init () {
 	int b = a;
 	a = 5;
 	// output [ b ];
+	return;
 };
 
 void Aux() {
