@@ -90,6 +90,11 @@ type ast =
 	| BooleanOr of ast * ast
 	| BooleanNot of ast
 	
+	| BitwiseNot of ast
+	| BitwiseAnd of ast * ast
+	| BitwiseOr of ast * ast
+	| BitwiseXor of ast * ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 	| While of ast * ast

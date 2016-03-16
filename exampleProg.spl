@@ -2,12 +2,27 @@ int Mod( int num, int div ) {
 	return num - ( num / div * div );
 };
 
-void Out( int a, int b, bool c ) {
-	output [ -a, -2 ];
+bool IntToBool( int n ) {
+	return ( n != 0 );
+};
+
+int BoolToInt( bool b ) {
+	/* if ( b ) {
+		return 1;
+	} else {
+		return 0;
+	}; */
+	return if b { 1 } else { 0 };
+};
+
+void Out( bool b ) {
+	output [ BoolToInt( b ) ];
 };
 
 void Init() {
-	Out( -20, 7, true );
+	//Out( -20, 7, true );
 };
-void Loop( int list input ) {};
+void Loop( int list input ) {
+	output [ ~(input[0]) ];
+};
 void Final() {};

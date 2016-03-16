@@ -90,6 +90,11 @@ type ast =
 	| BooleanOr of ast * ast
 	| BooleanNot of ast
 	
+	| BitwiseNot of ast
+	| BitwiseAnd of ast * ast
+	| BitwiseOr of ast * ast
+	| BitwiseXor of ast * ast
+	
 	(* Condition, consequent, alternative *)
 	| If of ast * ast * ast
 	| While of ast * ast
@@ -299,6 +304,11 @@ let prettyPrint tree =
 		| Times( left, right ) -> "( " ^ aux i left ^ " * " ^ aux i right ^ " )"
 		| Div( left, right ) -> "( " ^ aux i left ^ " / " ^ aux i right ^ " )"
 		
+		| BitwiseAnd( left, right ) -> "( " ^ aux i left ^ " & " ^ aux i right ^ " )"
+		| BitwiseOr( left, right ) -> "( " ^ aux i left ^ " | " ^ aux i right ^ " )"
+		| BitwiseXor( left, right ) -> "( " ^ aux i left ^ " ^ " ^ aux i right ^ " )"
+		| BitwiseNot( exp ) -> "~(" ^ aux i exp ^ ")"
+		
 		| CompareEqual( left, right ) -> "( " ^ aux i left ^ " == " ^ aux i right ^ " )"
 		| CompareLessThan( left, right ) -> "( " ^ aux i left ^ " < " ^ aux i right ^ " )"
 		| CompareLessEqual( left, right ) -> "( " ^ aux i left ^ " <= " ^ aux i right ^ " )"
@@ -457,12 +467,20 @@ let typeCheck ast =
 		(* Type check all of the integer operations the same way *)
 		| Plus( leftSide, rightSide ) | Minus( leftSide, rightSide )
 		| Times( leftSide, rightSide ) | Div( leftSide, rightSide )
-				-> let envWithLeftSide, leftType = checkTypes env leftSide
-				in let envWithBothSides, rightType = checkTypes envWithLeftSide rightSide
-				in ( match leftType, rightType with
-					| Type Int, Type Int -> envWithBothSides, Type Int
-					| Type _, Type _ -> raise ( InvalidTyping "Attempted to add non-integer value" )
-					| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot add a returned value" ) )
+		| BitwiseAnd( leftSide, rightSide ) | BitwiseOr( leftSide, rightSide )
+		| BitwiseXor( leftSide, rightSide )
+			-> let envWithLeftSide, leftType = checkTypes env leftSide
+			in let envWithBothSides, rightType = checkTypes envWithLeftSide rightSide
+			in ( match leftType, rightType with
+				| Type Int, Type Int -> envWithBothSides, Type Int
+				| Type _, Type _ -> raise ( InvalidTyping "Attempted to perform an integer operation on a non-integer value" )
+				| ReturnType _, _ | _, ReturnType _ -> raise ( InvalidTyping "Cannot perform an integer operation on a returned value" ) )
+		| BitwiseNot( exp ) -> let envWithExp, expType = checkTypes env exp
+			in ( match expType with
+				| Type Int -> envWithExp, Type Int
+				| Type _ -> raise ( InvalidTyping "Cannot use bitwise not on a non-integer value" )
+				| ReturnType _ -> raise ( InvalidTyping "Cannot use bitwise not on a returned value" )
+			)
 		
 		(* Type equality operators the same way *)
 		| CompareEqual( left, right ) | CompareNotEqual( left, right )
@@ -698,6 +716,26 @@ let rec eval env ast outputStreamAcc = match ast with
 		in ( match leftValue, rightValue with
 			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.div leftInt rightInt ) ), outputStreamWithRight
 			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating div" ) )
+	
+	| BitwiseAnd( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.logand leftInt rightInt ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating bitwise and" ) )
+	| BitwiseOr( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.logor leftInt rightInt ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating bitwise or" ) )
+	| BitwiseXor( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
+		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft
+		in ( match leftValue, rightValue with
+			| Value( IntVal leftInt ), Value( IntVal rightInt ) -> envWithRight, Value( IntVal( Int32.logxor leftInt rightInt ) ), outputStreamWithRight
+			| _ -> raise ( InvalidTyping "Unexpected typing when evaluating bitwise xor" ) )
+	| BitwiseNot( exp ) -> let envWithExp, expValue, outputStreamWithExp = eval env exp outputStreamAcc
+		in ( match expValue with
+			| Value( IntVal v ) -> envWithExp, Value( IntVal( Int32.lognot v ) ), outputStreamWithExp
+			| _ -> raise ( InvalidTyping "Invalid types in bitwise not (~)" ) )
 	
 	| CompareEqual( left, right ) -> let envWithLeft, leftValue, outputStreamWithLeft = eval env left outputStreamAcc
 		in let envWithRight, rightValue, outputStreamWithRight = eval envWithLeft right outputStreamWithLeft

@@ -13,7 +13,7 @@
             <Keywords name="Numbers, suffix1"></Keywords>
             <Keywords name="Numbers, suffix2"></Keywords>
             <Keywords name="Numbers, range"></Keywords>
-            <Keywords name="Operators1">( ) ; , + - / * = [ ] #</Keywords>
+            <Keywords name="Operators1">( ) ; , + - / * = [ ] # == != *= += -= /= &lt; &gt; &lt;= &gt;= ~ ^ &amp; | &amp;&amp; || </Keywords>
             <Keywords name="Operators2"></Keywords>
             <Keywords name="Folders in code1, open">{</Keywords>
             <Keywords name="Folders in code1, middle"></Keywords>
@@ -26,7 +26,7 @@
             <Keywords name="Folders in comment, close"></Keywords>
             <Keywords name="Keywords1">int bool list void</Keywords>
             <Keywords name="Keywords2">return output</Keywords>
-            <Keywords name="Keywords3">if while for else </Keywords>
+            <Keywords name="Keywords3">if while for else</Keywords>
             <Keywords name="Keywords4"></Keywords>
             <Keywords name="Keywords5"></Keywords>
             <Keywords name="Keywords6"></Keywords>

@@ -16,6 +16,7 @@
 %token PLUS MINUS TIMES DIV
 %token COMPEQ COMPLT COMPGT COMPLE COMPGE COMPNE
 %token BOOLAND BOOLOR BOOLNOT
+%token BITWISEAND BITWISEOR BITWISEXOR BITWISENOT
 %token LISTLENGTHOP
 %token ENDOFPROGRAM
 %token OPENSQUAREBRACKET CLOSESQUAREBRACKET
@@ -27,18 +28,24 @@
 %token <int32>INTLIT
 %token <bool>BOOLLIT
 
-%left ASSIGN
+%left SEMICOLON
+%left COMMA
+
+%left ASSIGN ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV
 %left BOOLOR
 %left BOOLAND
-%left COMPEQ COMPGE COMPGT COMPLE COMPLT COMPNE
+%left BITWISEOR
+%left BITWISEXOR
+%left BITWISEAND
+%left COMPNE COMPEQ 
+%left COMPGE COMPGT COMPLE COMPLT 
 %left PLUS MINUS
 %left TIMES DIV
-%nonassoc LISTLENGTHOP
-%nonassoc BOOLNOT
+%right BITWISENOT BOOLNOT LISTLENGTHOP
+%left OPENPAREN CLOSEPAREN OPENSQUAREBRACKET CLOSESQUAREBRACKET
+
 /*(*%left INCREMENT*)*/
 
-%left COMMA
-%left SEMICOLON
 
 %start main
 %type <Spl.ast> main
@@ -100,10 +107,14 @@ expr:
 	| expr COMPGT expr { CompareLessThan( $3, $1 ) } /*(* Left/right side swapped to convert greater than to less than *)*/
 	| expr COMPLE expr { CompareLessEqual( $1, $3 ) }
 	| expr COMPGE expr { CompareLessEqual( $3, $1 ) } /*(* As above *)*/
-	| expr COMPNE expr { CompareNotEqual( $1, $3 ) }
+	| expr COMPNE expr { BooleanNot( CompareEqual( $1, $3 ) ) }
 	| BOOLNOT expr { BooleanNot $2 }
 	| expr BOOLAND expr { BooleanAnd( $1, $3 ) }
 	| expr BOOLOR expr { BooleanOr( $1, $3 ) }
+	| expr BITWISEAND expr { BitwiseAnd( $1, $3 ) }
+	| expr BITWISEOR expr { BitwiseOr( $1, $3 ) }
+	| expr BITWISEXOR expr { BitwiseXor( $1, $3 ) }
+	/*(* | expr BITWISENOT { BitwiseNot( $1 ) } *)*/
 	| OPENPAREN expr CLOSEPAREN { $2 }
 	| arrayIndex { $1 }
 	| arrayLength { $1 }

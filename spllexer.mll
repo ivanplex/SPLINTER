@@ -39,6 +39,11 @@ rule main = parse
 	| "||" { BOOLOR }
 	| '!' { BOOLNOT }
 	
+	(*| '~' { BITWISENOT }*)
+	| '&' { BITWISEAND }
+	| '|' { BITWISEOR }
+	| '^' { BITWISEXOR }
+	
 	(* End the program either on the end of file, or a '~' character.
 	Entering a '~' is easier when writing the program directly into
 	the console *)
