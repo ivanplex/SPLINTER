@@ -94,6 +94,7 @@ expr:
 	| expr MINUS expr { Minus( $1, $3 ) }
 	| expr TIMES expr { Times( $1, $3 ) }
 	| expr DIV expr { Div( $1, $3 ) }
+	| MINUS expr { Minus( IntLit( 0l ), $2 ) } /*(* Unary minus *)*/
 	| expr COMPEQ expr { CompareEqual( $1, $3 ) }
 	| expr COMPLT expr { CompareLessThan( $1, $3 ) }
 	| expr COMPGT expr { CompareLessThan( $3, $1 ) } /*(* Left/right side swapped to convert greater than to less than *)*/

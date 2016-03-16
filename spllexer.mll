@@ -64,7 +64,7 @@ rule main = parse
 	| '{' { OPENBRACE }
 	| '}' { CLOSEBRACE }
 	
-	| '-'? [ '0'-'9' ]+ as lit { INTLIT( Int32.of_string lit ) }
+	| (*'-'?*) [ '0'-'9' ]+ as lit { INTLIT( Int32.of_string lit ) }
 	(* | ( "true" | "false" ) as lit { BOOLLIT( bool_of_string lit ) } *)
 	| "true"  { BOOLLIT( true  ) }
 	| "false" { BOOLLIT( false ) }

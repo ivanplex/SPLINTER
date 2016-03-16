@@ -4,6 +4,7 @@ Allow assignment to the length of a array/list
 
 	bitwise operations (?)
 	modulo
+	better unary-minus
 
 	Comment the code better!
 

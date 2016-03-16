@@ -1,0 +1,19 @@
+
+int list inputA = [];
+int list inputB = [];
+
+void Init() {};
+
+void Loop( int list input ) {
+	int idx = #inputA;
+	inputA[idx] = input[0];
+	inputB[idx] = input[1];
+};
+
+void Final() {
+	for ( int i = 0; i < #inputA; i += 1 ) {
+		int idxA = i;
+		int idxB = #inputA-i-1;
+		output[ inputA[idxA] + inputB[idxB] ];
+	};
+};

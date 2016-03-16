@@ -3,11 +3,11 @@ int Mod( int num, int div ) {
 };
 
 void Out( int a, int b, bool c ) {
-	output [ a, b ];
+	output [ -a, -2 ];
 };
 
 void Init() {
-	Out( 1, 7, true );
+	Out( -20, 7, true );
 };
 void Loop( int list input ) {};
 void Final() {};
