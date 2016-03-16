@@ -8,16 +8,16 @@ exception SyntaxError
 let parseStream streamLexbuf = try 
 		Streamparser.main Streamlexer.main streamLexbuf
 	with Parsing.Parse_error
-		-> ( print_string "Syntax error in parsing stream data\n"; flush stdout; raise SyntaxError )
+		-> ( prerr_string "Syntax error in parsing stream data\n"; flush stderr; raise SyntaxError )
 	| Failure( message )
-		-> ( print_string ( "failure in parsing stream data\n" ^ message ^ "\n" ); flush stdout; raise SyntaxError )
+		-> ( prerr_string ( "failure in parsing stream data\n" ^ message ^ "\n" ); flush stderr; raise SyntaxError )
 
 let parseProgram splLexbuf = try
 		Splparser.main Spllexer.main splLexbuf
 	with Parsing.Parse_error
-		-> ( print_string "Syntax error in parsing program\n"; flush stdout; raise SyntaxError )
+		-> ( prerr_string "Syntax error in parsing program\n"; flush stderr; raise SyntaxError )
 	| Failure( message )
-		-> ( print_string ( "failure in parsing program\n" ^ message ^ "\n" ); flush stdout; raise SyntaxError )
+		-> ( prerr_string ( "failure in parsing program\n" ^ message ^ "\n" ); flush stderr; raise SyntaxError )
 
 let rec int32listToVariableList = function
 	| value :: tail -> IntVal value :: int32listToVariableList tail
@@ -50,4 +50,4 @@ let _ = try
 		in checkStreamLengths outputStreamWithFinal;
 		print_string ( string_of_stream ( List.rev outputStreamWithFinal ) );
 		flush stdout
-	with Parsing.Parse_error -> print_string "Syntax error\n"; flush stdout
+	with Parsing.Parse_error -> prerr_string "Syntax error\n"; flush stderr
