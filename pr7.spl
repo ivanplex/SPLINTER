@@ -1,0 +1,11 @@
+//Problem 7
+//Take two input streams a, and b,
+//output c and d such that c_i = a_i - b_i, d_i = a_i
+
+void Init() {};
+
+void Loop( int list input ) {
+	output [ input[0] - input[1], input[0] ];
+};
+
+void Final() {};

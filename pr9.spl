@@ -1,0 +1,19 @@
+//Problem 9
+
+int list input = [];
+
+void Init() {};
+
+void Loop( int list currentInput ) {
+	input[ #input ] = currentInput[0];
+
+	int outputValue = 0;
+	for ( int i = 1; i <= #input; i += 1 ) {
+		int idx = #input - i;
+		outputValue += input[idx] * i;
+	};
+
+	output [ outputValue ];
+};
+
+void Final() {};
