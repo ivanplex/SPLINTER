@@ -1,0 +1,12 @@
+void Init(){
+	int a = 1;
+	int b=2;
+	b++;
+
+	output [a];
+	output [b];
+}
+
+void Loop(int list a){}
+
+void Final(){}

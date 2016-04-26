@@ -1,0 +1,23 @@
+int previousOdd = 0;
+int previousEven = 0;
+bool isEven = false;
+
+
+void Init(){}
+
+void Loop(int list input) {
+
+	if(isEven){
+		output[input[0] + previousEven];
+		previousEven = input[0] + previousEven;
+		isEven = false;
+	}else{
+		output[input[0] + previousOdd];
+                previousOdd = input[0] + previousOdd;
+                isEven = true;
+	};
+	
+}
+
+void Final() {}
+

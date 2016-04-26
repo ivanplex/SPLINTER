@@ -1,0 +1,11 @@
+int previous = 0;
+
+void Init(){}
+
+void Loop(int list input) {
+		output[input[0]+previous];
+		previous = input[0];
+}
+
+void Final() {}
+
