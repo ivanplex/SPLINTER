@@ -1,12 +1,14 @@
 //Question 8
+//Take a sequence a1 a2 a3 a4 a5 . . . as an input and output a1 + 0 a2 + a1 a3 + a2 a4 + a3 a5 + a4 . . .
 
-int previous = 0;
+
+int previous = 0;	//Keep track of the previous element from the sequence, set to 0 initially
 
 void Init(){}
 
 void Loop(int list input) {
-		output[input[0]+previous];
-		previous = input[0];
+		output[input[0]+previous];	//Evaluate the sum of current element and the previous element before outputing
+		previous = input[0];		//Update previous element
 }
 
 void Final() {}
