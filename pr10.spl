@@ -1,25 +1,34 @@
-//Question 10
+// Question 10
+// take a single input stream a,
+// output a single stream b such that,
+// b_i = a_i for i <= 1
+// b_i = a_i + b_(i-2) for i > 1
 
+// Keep track of the previous even and odd indexed output values separately
 int previousOdd = 0;
 int previousEven = 0;
-bool isEven = false;
+// Also keep track of whether the next input is odd or even indexed
+bool isEven = true;
 
+void Init() {};
 
-void Init(){}
-
-void Loop(int list input) {
-
-	if(isEven){
-		output[input[0] + previousEven];
-		previousEven = input[0] + previousEven;
-		isEven = false;
-	}else{
-		output[input[0] + previousOdd];
-                previousOdd = input[0] + previousOdd;
-                isEven = true;
+void Loop( int list input ) {
+	if isEven {
+		//Add the current input and second to last output
+		int currentOutput = input[0] + previousEven;
+		output [ currentOutput ];
+		
+		previousEven = currentOutput;
+	} else {
+		//Add the current input and second to last output
+		int currentOutput = input[0] + previousOdd;
+		output [ currentOutput ];
+		
+		previousOdd = currentOutput;
 	};
 	
+	isEven = !isEven;
 }
 
-void Final() {}
+void Final() {};
 

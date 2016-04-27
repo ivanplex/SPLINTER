@@ -1,13 +1,23 @@
-//Question 8
+// Problem 8
+// take a single input stream,
+// output a stream such that each element is
+// 	the sum of the current input and the previous input
 
+// with an input stream a, and output stream b,
+// b_0 = a_0,
+// b_i = a_i + a_(i-1) for all i > 0
+
+
+//keep track of the last value
 int previous = 0;
 
 void Init(){}
 
 void Loop(int list input) {
-		output[input[0]+previous];
-		previous = input[0];
+	//output the sum of the current input, and the previous
+	output [ input[0] + previous ];
+	//update the value to the current input
+	previous = input[0];
 }
 
 void Final() {}
-

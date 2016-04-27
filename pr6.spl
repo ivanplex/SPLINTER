@@ -1,12 +1,18 @@
-//Question 6
+//Problem 6
+// Take 1 input stream
+// Output 2 streams such that the first is a direct copy of the input,
+// 	and the second is the input stream with 0 prefixed to it, and the last element removed
 
+//keep track of the last element of the input stream,
+//defaulting to 0, so we output 0 first
 int previous = 0;
 
 void Init(){}
 
 void Loop(int list input) {
-		output[input[0], previous];
-		previous = input[0];
+	// output the current value, and the last value
+	// log the current value for the next iteration
+	previous = input[0];
 }
 
 void Final() {}
