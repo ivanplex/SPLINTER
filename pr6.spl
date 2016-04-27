@@ -11,6 +11,7 @@ void Init(){}
 
 void Loop(int list input) {
 	// output the current value, and the last value
+	output [ input[0], previous ];
 	// log the current value for the next iteration
 	previous = input[0];
 }

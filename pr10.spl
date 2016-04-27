@@ -1,4 +1,4 @@
-// Question 10
+// Problem 10
 // take a single input stream a,
 // output a single stream b such that,
 // b_i = a_i for i <= 1
