@@ -1,12 +1,14 @@
 //Question 6
+//Take a sequence a1 a2 a3 a4 a5 ... as an input and output two copies of it, the second prefixed with 0
 
-int previous = 0;
+
+int previous = 0;	//Keep track of the previous element in the sequence, start with 0 initially
 
 void Init(){}
 
 void Loop(int list input) {
-		output[input[0], previous];
-		previous = input[0];
+		output[input[0], previous];	//Print the current element and the previous element pair
+		previous = input[0];	//Update the previous element
 }
 
 void Final() {}
