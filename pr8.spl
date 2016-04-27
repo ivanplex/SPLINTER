@@ -3,21 +3,19 @@
 // output a stream such that each element is
 // 	the sum of the current input and the previous input
 
-// with an input stream a, and output stream b,
-// b_0 = a_0,
-// b_i = a_i + a_(i-1) for all i > 0
+// keep track of the last value
+// Take a sequence a1, a2, a3, a4, a5 . . . as an input and output a1 + 0, a2 + a1, a3 + a2, a4 + a3, a5 + a4, . . .
 
-
-//keep track of the last value
+// Keep track of the previous element from the sequence, set to 0 initially
 int previous = 0;
 
-void Init(){}
+void Init() {};
 
 void Loop(int list input) {
-	//output the sum of the current input, and the previous
+	// Output the sum of the current input, and the previous
 	output [ input[0] + previous ];
-	//update the value to the current input
+	// Update previous element
 	previous = input[0];
-}
+};
 
-void Final() {}
+void Final() {};

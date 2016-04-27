@@ -1,6 +1,8 @@
-//Problem 7
-//Take two input streams a, and b,
-//output c and d such that c_i = a_i - b_i, d_i = a_i
+// Problem 7
+// Take two input streams a, and b,
+// output two streams, c and d such that
+// 	c_i = a_i - b_i,
+// 	d_i = a_i
 
 void Init() {};
 

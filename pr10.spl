@@ -1,10 +1,9 @@
 // Problem 10
-// take a single input stream a,
-// output a single stream b such that,
-// b_i = a_i for i <= 1
-// b_i = a_i + b_(i-2) for i > 1
+// Take a sequence a1, a2, a3, a4, a5, a6, . . . as an input 
+// and output a1, a2, a3 + a1, a4 + a2, a5 + a3 + a1, a6 + a4 + a2, . . .
 
-// Keep track of the previous even and odd indexed output values separately
+// Two previous numbers has to be stored. We seperate the two numbers by identifing one as odd and the other as even
+// Both global variables are set to 0 initially
 int previousOdd = 0;
 int previousEven = 0;
 // Also keep track of whether the next input is odd or even indexed
@@ -27,6 +26,7 @@ void Loop( int list input ) {
 		previousOdd = currentOutput;
 	};
 	
+	// Update odd to even, or vice-versa
 	isEven = !isEven;
 }
 

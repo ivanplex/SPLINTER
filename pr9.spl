@@ -1,4 +1,4 @@
-//Problem 9
+// Problem 9
 // take an input stream a,
 // output a single stream b such that
 // b_i = sum r=0 to i { (i+1-r) * a_i }
@@ -7,8 +7,10 @@
 // one variable containing the sum of all inputs up to this point,
 // and another keeping the value of the previous output
 
-int inputSum = 0; // will hold a_0 + a_1 + a_2 + ...
-int total = 0; // will hold n * a_0 + (n-1) * a_1 + (n-2) * a_2 + ... + 1 * a_(n-1)
+// will hold a_0 + a_1 + a_2 + ...
+int inputSum = 0; 
+// will hold n * a_0 + (n-1) * a_1 + (n-2) * a_2 + ... + 1 * a_(n-1)
+int total = 0; 
 
 void Init() {};
 
