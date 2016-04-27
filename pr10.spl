@@ -1,8 +1,12 @@
 //Question 10
+//Take a sequence a1 a2 a3 a4 a5 a6 . . . as an input and output a1 a2 a3 + a1 a4 + a2 a5 + a3 + a1 a6 + a4 + a2 . . .
+
+//Two previous numbers has to be stored. We seperate the two numbers by identifing one as odd and the other as even
+//Both global variables are set to 0 initially
 
 int previousOdd = 0;
 int previousEven = 0;
-bool isEven = false;
+bool isEven = false;	//Identify which global variable represents the element in position n-2
 
 
 void Init(){}
@@ -10,13 +14,13 @@ void Init(){}
 void Loop(int list input) {
 
 	if(isEven){
-		output[input[0] + previousEven];
-		previousEven = input[0] + previousEven;
-		isEven = false;
+		output[input[0] + previousEven];	//Evaluate the sum of current element and the previous even number
+		previousEven = input[0] + previousEven;	//Update variable for previous even
+		isEven = false;		//Switch pointer
 	}else{
-		output[input[0] + previousOdd];
-                previousOdd = input[0] + previousOdd;
-                isEven = true;
+		output[input[0] + previousOdd];		//Evaluate the sum of current element and the previous odd number
+                previousOdd = input[0] + previousOdd;	//Update variable for previous odd
+                isEven = true;		//Switch pointer
 	};
 	
 }
